@@ -26,7 +26,7 @@ export function createSettingsView(onBack: () => Promise<void>): ViewRenderer {
         <div class="form-group">
           <label for="apikey">OpenAI API Key</label>
           <input id="apikey" type="password" placeholder="sk-..." value="${escapeHtml(current.apiKey ?? '')}" />
-          <p class="muted">La chiave è salvata cifrata nel vault.</p>
+          <p class="muted">La chiave è salvata in chiaro in chrome.storage.local.</p>
         </div>
 
         <div class="form-group">

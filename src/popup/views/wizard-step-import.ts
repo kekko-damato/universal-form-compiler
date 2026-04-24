@@ -13,7 +13,7 @@ export function createWizardImportStep(
   return {
     render(container: HTMLElement) {
       container.innerHTML = `
-        <h1>Step 2 di 3 — Importa dati</h1>
+        <h1>Step 1 di 2 — Importa dati</h1>
         <p class="muted">
           Carica un file (DOCX, CSV, YAML) con i tuoi dati. L'AI li
           normalizzerà nello schema interno.
@@ -22,7 +22,7 @@ export function createWizardImportStep(
         <div class="form-group">
           <label for="apikey">OpenAI API Key</label>
           <input id="apikey" type="password" placeholder="sk-..." />
-          <p class="muted">Salvata cifrata nel vault.</p>
+          <p class="muted">Salvata in chiaro in chrome.storage.local.</p>
         </div>
 
         <div class="form-group">

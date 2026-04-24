@@ -2,13 +2,15 @@ import type { ViewRenderer } from './router';
 import type {
   GetCanonicalDataRequest,
   GetCanonicalDataResponse,
+  ResetVaultRequest,
+  ResetVaultResponse,
 } from '@/types/messages';
 
 export function createMainView(
-  onLock: () => Promise<void>,
   onSettings: () => Promise<void>,
   onReimport: () => Promise<void>,
   onCompile: () => Promise<void>,
+  onReset: () => Promise<void>,
 ): ViewRenderer {
   return {
     async render(container: HTMLElement) {
@@ -20,7 +22,7 @@ export function createMainView(
       container.innerHTML = `
         <h1>Universal Form Compiler</h1>
         <p class="muted">
-          ${hasData ? 'Vault sbloccato e dati pronti.' : 'Vault sbloccato, ma nessun dato importato.'}
+          ${hasData ? 'Dati pronti.' : 'Nessun dato importato.'}
         </p>
 
         <div class="actions">
@@ -34,7 +36,7 @@ export function createMainView(
           <button id="settings-btn" class="secondary">Impostazioni</button>
         </div>
         <div class="actions" style="margin-top:8px">
-          <button id="lock-btn" class="secondary">Lock vault</button>
+          <button id="reset-btn" class="secondary">Cancella tutto</button>
         </div>
       `;
 
@@ -42,11 +44,6 @@ export function createMainView(
         .querySelector<HTMLButtonElement>('#compile-btn')!
         .addEventListener('click', async () => {
           await onCompile();
-        });
-      container
-        .querySelector<HTMLButtonElement>('#lock-btn')!
-        .addEventListener('click', async () => {
-          await onLock();
         });
       container
         .querySelector<HTMLButtonElement>('#settings-btn')!
@@ -57,6 +54,23 @@ export function createMainView(
         .querySelector<HTMLButtonElement>('#reimport-btn')!
         .addEventListener('click', async () => {
           await onReimport();
+        });
+      container
+        .querySelector<HTMLButtonElement>('#reset-btn')!
+        .addEventListener('click', async () => {
+          const ok = confirm(
+            'Cancellare tutti i dati salvati (API key + dati canonici)? ' +
+              "L'operazione non è reversibile.",
+          );
+          if (!ok) return;
+          const res = (await chrome.runtime.sendMessage({
+            type: 'vault/reset',
+          } as ResetVaultRequest)) as ResetVaultResponse;
+          if (!res.ok) {
+            alert(`Errore: ${res.error}`);
+            return;
+          }
+          await onReset();
         });
     },
   };

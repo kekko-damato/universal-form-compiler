@@ -1,6 +1,5 @@
 import { createRouter, type Router, type ViewRenderer, type ViewId } from './views/router';
 import { createSetupWizard } from './views/setup-wizard';
-import { createUnlockView } from './views/unlock';
 import { createMainView } from './views/main';
 import { createSettingsView } from './views/settings';
 import { createWizardImportStep } from './views/wizard-step-import';
@@ -9,8 +8,6 @@ import { createDryRunView } from './views/dry-run';
 import type {
   GetVaultStateRequest,
   GetVaultStateResponse,
-  LockVaultRequest,
-  LockVaultResponse,
   StartCompileRequest,
   StartCompileResponse,
 } from '@/types/messages';
@@ -22,13 +19,6 @@ async function getVaultState(): Promise<GetVaultStateResponse['state']> {
   return res.state;
 }
 
-async function lockVault(): Promise<void> {
-  const res = (await chrome.runtime.sendMessage({
-    type: 'vault/lock',
-  } as LockVaultRequest)) as LockVaultResponse;
-  void res;
-}
-
 async function boot(): Promise<void> {
   const container = document.getElementById('app');
   if (!container) throw new Error('missing #app');
@@ -38,13 +28,10 @@ async function boot(): Promise<void> {
   async function routeByState(): Promise<void> {
     const state = await getVaultState();
     switch (state.kind) {
-      case 'no_vault':
+      case 'no_data':
         await router.show('setup-wizard');
         return;
-      case 'locked':
-        await router.show('unlock');
-        return;
-      case 'unlocked':
+      case 'has_data':
         await router.show('main');
         return;
     }
@@ -114,17 +101,8 @@ async function boot(): Promise<void> {
 
   const views: Record<ViewId, () => ViewRenderer> = {
     'setup-wizard': () => createSetupWizard(routeByState),
-    unlock: () => createUnlockView(routeByState),
     main: () =>
-      createMainView(
-        async () => {
-          await lockVault();
-          await routeByState();
-        },
-        goSettings,
-        reImport,
-        goCompile,
-      ),
+      createMainView(goSettings, reImport, goCompile, routeByState),
     settings: () => createSettingsView(goMain),
     'dry-run': () => ({
       render: () => {

@@ -11,7 +11,7 @@ export function createWizardReviewStep(
   return {
     render(container: HTMLElement) {
       container.innerHTML = `
-        <h1>Step 3 di 3 — Rivedi i dati</h1>
+        <h1>Step 2 di 2 — Rivedi i dati</h1>
         <p class="muted">
           Controlla il JSON normalizzato. Puoi modificarlo prima di salvare.
         </p>

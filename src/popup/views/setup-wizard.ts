@@ -1,16 +1,17 @@
 import type { ViewRenderer } from './router';
-import { createWizardPasswordStep } from './wizard-step-password';
 import { createWizardImportStep } from './wizard-step-import';
 import { createWizardReviewStep } from './wizard-step-review';
 
-type WizardStep = 'password' | 'import' | 'review' | 'done';
+type WizardStep = 'import' | 'review' | 'done';
 
+// Passwordless wizard: just import → review → done. The old password step
+// was dropped when the master-password flow was removed.
 export function createSetupWizard(
   onFinished: () => Promise<void>,
 ): ViewRenderer {
   return {
     async render(container: HTMLElement) {
-      let step: WizardStep = 'password';
+      let step: WizardStep = 'import';
       let importedData: unknown = null;
 
       const advance = async (to: WizardStep): Promise<void> => {
@@ -23,8 +24,6 @@ export function createSetupWizard(
 
       const viewFor = async (s: WizardStep): Promise<ViewRenderer | null> => {
         switch (s) {
-          case 'password':
-            return createWizardPasswordStep(() => advance('import'));
           case 'import':
             return createWizardImportStep(async (data) => {
               importedData = data;
@@ -41,7 +40,7 @@ export function createSetupWizard(
         }
       };
 
-      await advance('password');
+      await advance('import');
     },
   };
 }
