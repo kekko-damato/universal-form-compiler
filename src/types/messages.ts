@@ -83,6 +83,29 @@ export type SaveCanonicalDataResponse =
   | { ok: true }
   | { ok: false; error: string };
 
+// --- Compile flow (popup ↔ background) ---
+
+export type StartCompileRequest = { type: 'compile/start' };
+export type StartCompileResponse =
+  | {
+      ok: true;
+      fields: unknown[];       // FieldDescriptor[], serialized
+      proposal: unknown[];     // Mapping[], serialized
+      tokensUsed: number;
+    }
+  | { ok: false; error: string };
+
+export type ConfirmCompileRequest = {
+  type: 'compile/confirm';
+  mappings: unknown[];         // user-edited Mapping[]
+};
+export type ConfirmCompileResponse =
+  | { ok: true; results: { fieldId: string; ok: boolean; error?: string }[] }
+  | { ok: false; error: string };
+
+export type ClearMarksRequest = { type: 'compile/clearMarks' };
+export type ClearMarksResponse = { ok: true };
+
 // --- Discriminated union ---
 
 export type PopupRequest =
@@ -95,7 +118,10 @@ export type PopupRequest =
   | SaveSettingsRequest
   | ImportFileRequest
   | GetCanonicalDataRequest
-  | SaveCanonicalDataRequest;
+  | SaveCanonicalDataRequest
+  | StartCompileRequest
+  | ConfirmCompileRequest
+  | ClearMarksRequest;
 
 export type PopupResponse =
   | GetVaultStateResponse
@@ -107,7 +133,10 @@ export type PopupResponse =
   | SaveSettingsResponse
   | ImportFileResponse
   | GetCanonicalDataResponse
-  | SaveCanonicalDataResponse;
+  | SaveCanonicalDataResponse
+  | StartCompileResponse
+  | ConfirmCompileResponse
+  | ClearMarksResponse;
 
 // Helper to map request → response type at compile time.
 export type ResponseFor<R extends PopupRequest> =
@@ -121,4 +150,7 @@ export type ResponseFor<R extends PopupRequest> =
   R extends ImportFileRequest ? ImportFileResponse :
   R extends GetCanonicalDataRequest ? GetCanonicalDataResponse :
   R extends SaveCanonicalDataRequest ? SaveCanonicalDataResponse :
+  R extends StartCompileRequest ? StartCompileResponse :
+  R extends ConfirmCompileRequest ? ConfirmCompileResponse :
+  R extends ClearMarksRequest ? ClearMarksResponse :
   never;
