@@ -1,0 +1,31 @@
+.ufc-mark-certain,
+.ufc-mark-uncertain,
+.ufc-mark-unmapped,
+.ufc-mark-sensitive,
+.ufc-mark-skipped {
+  outline: 2px solid transparent !important;
+  outline-offset: 2px !important;
+  transition: outline-color 120ms ease-in-out;
+}
+.ufc-mark-certain { outline-color: #10b981 !important; }
+.ufc-mark-uncertain { outline-color: #f59e0b !important; }
+.ufc-mark-unmapped { outline-color: #ef4444 !important; }
+.ufc-mark-sensitive { outline-color: #8b5cf6 !important; }
+.ufc-mark-skipped { outline-color: #6b7280 !important; }
+
+.ufc-toast {
+  position: fixed !important;
+  bottom: 16px !important;
+  right: 16px !important;
+  padding: 10px 14px !important;
+  border-radius: 8px !important;
+  background: #0f172a !important;
+  color: #f1f5f9 !important;
+  font: 500 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif !important;
+  z-index: 2147483647 !important;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35) !important;
+  max-width: 360px !important;
+}
+.ufc-toast-error {
+  background: #7f1d1d !important;
+}
