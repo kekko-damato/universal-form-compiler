@@ -8,6 +8,7 @@ import {
   type EncryptedBlob,
 } from './crypto';
 import { readKey, writeKey, removeKey } from './storage';
+import type { CanonicalData } from './canonical-schema';
 
 export const VAULT_STORAGE_KEY = 'ufc_vault_v1';
 export const MIN_MASTER_PASSWORD_LENGTH = 12;
@@ -148,4 +149,54 @@ export async function writeVaultData(
 export async function deleteVault(masterPassword: string): Promise<void> {
   await openVault(masterPassword); // verifies password; throws otherwise
   await removeKey(VAULT_STORAGE_KEY);
+}
+
+export interface SecretConfig {
+  apiKey: string;
+  model: string;
+}
+
+interface ExtendedVaultData extends VaultData {
+  data: Record<string, unknown> & {
+    secretConfig?: SecretConfig;
+    canonical?: CanonicalData;
+  };
+}
+
+function asExtended(data: VaultData): ExtendedVaultData {
+  return data as ExtendedVaultData;
+}
+
+export async function writeSecretConfig(
+  config: SecretConfig,
+  masterPassword: string,
+): Promise<void> {
+  const current = await openVault(masterPassword);
+  const ext = asExtended(current);
+  ext.data = { ...(ext.data ?? {}), secretConfig: config };
+  await writeVaultData(ext, masterPassword);
+}
+
+export async function readSecretConfig(
+  masterPassword: string,
+): Promise<SecretConfig | null> {
+  const current = asExtended(await openVault(masterPassword));
+  return current.data?.secretConfig ?? null;
+}
+
+export async function writeCanonicalData(
+  data: CanonicalData,
+  masterPassword: string,
+): Promise<void> {
+  const current = await openVault(masterPassword);
+  const ext = asExtended(current);
+  ext.data = { ...(ext.data ?? {}), canonical: data };
+  await writeVaultData(ext, masterPassword);
+}
+
+export async function readCanonicalData(
+  masterPassword: string,
+): Promise<CanonicalData | null> {
+  const current = asExtended(await openVault(masterPassword));
+  return current.data?.canonical ?? null;
 }

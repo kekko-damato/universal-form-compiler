@@ -1,9 +1,16 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import type { VaultData } from '@/lib/vault';
+import type { VaultData, SecretConfig } from '@/lib/vault';
 import { createVault, hasVault, readVaultBlob, VAULT_STORAGE_KEY } from '@/lib/vault';
 import { openVault, VaultLockedError, WrongPasswordError } from '@/lib/vault';
 import { writeVaultData } from '@/lib/vault';
 import { deleteVault } from '@/lib/vault';
+import {
+  writeSecretConfig,
+  readSecretConfig,
+  writeCanonicalData,
+  readCanonicalData,
+} from '@/lib/vault';
+import type { CanonicalData } from '@/lib/canonical-schema';
 import { clearAll, readKey } from '@/lib/storage';
 
 describe('vault: createVault', () => {
@@ -120,5 +127,48 @@ describe('vault: deleteVault', () => {
       WrongPasswordError,
     );
     expect(await hasVault()).toBe(true);
+  });
+});
+
+describe('vault: secret config', () => {
+  beforeEach(async () => {
+    await clearAll();
+  });
+
+  it('stores and reads apiKey + model', async () => {
+    await createVault('my strong pw 123');
+    const cfg: SecretConfig = { apiKey: 'sk-test-abc', model: 'gpt-4o-mini' };
+    await writeSecretConfig(cfg, 'my strong pw 123');
+    const read = await readSecretConfig('my strong pw 123');
+    expect(read).toEqual({ apiKey: 'sk-test-abc', model: 'gpt-4o-mini' });
+  });
+
+  it('readSecretConfig returns null before first write', async () => {
+    await createVault('my strong pw 123');
+    const cfg = await readSecretConfig('my strong pw 123');
+    expect(cfg).toBeNull();
+  });
+});
+
+describe('vault: canonical data', () => {
+  beforeEach(async () => {
+    await clearAll();
+  });
+
+  it('stores and reads CanonicalData', async () => {
+    await createVault('my strong pw 123');
+    const data: CanonicalData = {
+      version: 1,
+      person: { first_name: 'Antonio', last_name: 'Rossi' },
+      contact: { email: 'antonio@example.com' },
+    };
+    await writeCanonicalData(data, 'my strong pw 123');
+    const read = await readCanonicalData('my strong pw 123');
+    expect(read).toEqual(data);
+  });
+
+  it('readCanonicalData returns null before first write', async () => {
+    await createVault('my strong pw 123');
+    expect(await readCanonicalData('my strong pw 123')).toBeNull();
   });
 });
