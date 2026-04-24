@@ -8,6 +8,7 @@ export function createMainView(
   onLock: () => Promise<void>,
   onSettings: () => Promise<void>,
   onReimport: () => Promise<void>,
+  onCompile: () => Promise<void>,
 ): ViewRenderer {
   return {
     async render(container: HTMLElement) {
@@ -21,11 +22,12 @@ export function createMainView(
         <p class="muted">
           ${hasData ? 'Vault sbloccato e dati pronti.' : 'Vault sbloccato, ma nessun dato importato.'}
         </p>
-        <p class="muted">
-          La compilazione dei form arriva in Fase 1c.
-        </p>
 
         <div class="actions">
+          <button id="compile-btn" ${!hasData ? 'disabled' : ''}>Compila questo form</button>
+        </div>
+
+        <div class="actions" style="margin-top:8px">
           <button id="reimport-btn" class="secondary">
             ${hasData ? 'Re-importa dati' : 'Importa dati'}
           </button>
@@ -36,6 +38,11 @@ export function createMainView(
         </div>
       `;
 
+      container
+        .querySelector<HTMLButtonElement>('#compile-btn')!
+        .addEventListener('click', async () => {
+          await onCompile();
+        });
       container
         .querySelector<HTMLButtonElement>('#lock-btn')!
         .addEventListener('click', async () => {

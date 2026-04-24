@@ -1,4 +1,4 @@
-export type ViewId = 'setup-wizard' | 'unlock' | 'main' | 'settings';
+export type ViewId = 'setup-wizard' | 'unlock' | 'main' | 'settings' | 'dry-run';
 
 export interface ViewRenderer {
   render(container: HTMLElement): void | Promise<void>;

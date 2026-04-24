@@ -5,11 +5,14 @@ import { createMainView } from './views/main';
 import { createSettingsView } from './views/settings';
 import { createWizardImportStep } from './views/wizard-step-import';
 import { createWizardReviewStep } from './views/wizard-step-review';
+import { createDryRunView } from './views/dry-run';
 import type {
   GetVaultStateRequest,
   GetVaultStateResponse,
   LockVaultRequest,
   LockVaultResponse,
+  StartCompileRequest,
+  StartCompileResponse,
 } from '@/types/messages';
 
 async function getVaultState(): Promise<GetVaultStateResponse['state']> {
@@ -68,6 +71,47 @@ async function boot(): Promise<void> {
     await importStep.render(host);
   }
 
+  async function goCompile(): Promise<void> {
+    container!.innerHTML = '<p class="muted">Analizzo il form…</p>';
+    const res = (await chrome.runtime.sendMessage({
+      type: 'compile/start',
+    } as StartCompileRequest)) as StartCompileResponse;
+    if (!res.ok) {
+      container!.innerHTML = `
+        <h1>Errore</h1>
+        <p class="error">${escapeHtml(res.error)}</p>
+        <div class="actions">
+          <button id="back-btn" class="secondary">Indietro</button>
+        </div>
+      `;
+      const back = container!.querySelector<HTMLButtonElement>('#back-btn');
+      back?.addEventListener('click', () => {
+        void routeByState();
+      });
+      return;
+    }
+    const view = createDryRunView(
+      res.fields as {
+        id: string;
+        labels: { text: string; source: string }[];
+        attributes: { name?: string };
+      }[],
+      res.proposal as never,
+      res.tokensUsed,
+      goMain,
+    );
+    await view.render(container!);
+  }
+
+  function escapeHtml(s: string): string {
+    return s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   const views: Record<ViewId, () => ViewRenderer> = {
     'setup-wizard': () => createSetupWizard(routeByState),
     unlock: () => createUnlockView(routeByState),
@@ -79,8 +123,14 @@ async function boot(): Promise<void> {
         },
         goSettings,
         reImport,
+        goCompile,
       ),
     settings: () => createSettingsView(goMain),
+    'dry-run': () => ({
+      render: () => {
+        /* dry-run is rendered imperatively by goCompile */
+      },
+    }),
   };
 
   router = createRouter(container, views);

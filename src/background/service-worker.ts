@@ -262,9 +262,17 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
           };
         }
         const tabId = await activeTabId();
-        const scanRes = (await chrome.tabs.sendMessage(tabId, {
-          type: 'content/scan',
-        })) as { ok: true; fields: FieldDescriptor[] } | { ok: false; error: string };
+        let scanRes: { ok: true; fields: FieldDescriptor[] } | { ok: false; error: string };
+        try {
+          scanRes = (await chrome.tabs.sendMessage(tabId, {
+            type: 'content/scan',
+          })) as { ok: true; fields: FieldDescriptor[] } | { ok: false; error: string };
+        } catch {
+          return {
+            ok: false,
+            error: 'Apri una pagina web normale (http/https) e riprova',
+          };
+        }
         if (!('ok' in scanRes) || !scanRes.ok) {
           return {
             ok: false,
