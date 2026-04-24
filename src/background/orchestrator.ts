@@ -13,7 +13,7 @@ import {
 } from '@/lib/canonical-schema';
 
 export interface OrchestratorDeps {
-  ai: Pick<AIClient, 'structuredCompletion'>;
+  ai: Pick<AIClient, 'jsonCompletion'>;
 }
 
 export interface ProposalResult {
@@ -56,7 +56,7 @@ export async function computeProposal(
   const aiMappings: Mapping[] = [];
 
   if (remaining.length > 0 && availableKeys.length > 0) {
-    const res = await deps.ai.structuredCompletion<{
+    const res = await deps.ai.jsonCompletion<{
       mappings: {
         fieldId: string;
         canonicalKey: string | null;

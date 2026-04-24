@@ -4,8 +4,8 @@ import type { FieldDescriptor } from '@/types/field';
 import type { AIClient } from '@/background/ai-client';
 import type { CanonicalData } from '@/lib/canonical-schema';
 
-const makeAI = (result: unknown, usage = { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }): Pick<AIClient, 'structuredCompletion'> => ({
-  structuredCompletion: vi.fn().mockResolvedValue({ data: result, usage }),
+const makeAI = (result: unknown, usage = { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 }): Pick<AIClient, 'jsonCompletion'> => ({
+  jsonCompletion: vi.fn().mockResolvedValue({ data: result, usage }),
 });
 
 function sampleFields(): FieldDescriptor[] {

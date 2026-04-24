@@ -8,7 +8,7 @@ function makeDeps(
 ): ImporterDeps {
   return {
     ai: {
-      structuredCompletion: vi.fn().mockResolvedValue(aiResult),
+      jsonCompletion: vi.fn().mockResolvedValue(aiResult),
     },
   };
 }
@@ -45,7 +45,7 @@ describe('importRawData', () => {
       expect(result.data.contact.email).toBe('antonio@example.com');
       expect(result.usage.total_tokens).toBe(30);
     }
-    expect(deps.ai.structuredCompletion).toHaveBeenCalledTimes(1);
+    expect(deps.ai.jsonCompletion).toHaveBeenCalledTimes(1);
   });
 
   it('returns validation errors if AI output fails Zod validation', async () => {
@@ -86,7 +86,7 @@ describe('importRawData', () => {
     );
     expect(result.ok).toBe(true);
 
-    const mockFn = deps.ai.structuredCompletion as ReturnType<typeof vi.fn>;
+    const mockFn = deps.ai.jsonCompletion as ReturnType<typeof vi.fn>;
     const firstCall = mockFn.mock.calls[0];
     expect(firstCall).toBeDefined();
     const call = firstCall![0] as { user: string };

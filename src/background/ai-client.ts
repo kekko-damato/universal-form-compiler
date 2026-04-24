@@ -61,6 +61,19 @@ export interface AIClient {
   structuredCompletion<T = unknown>(
     req: StructuredCompletionRequest,
   ): Promise<StructuredCompletionResult<T>>;
+  /**
+   * Like `structuredCompletion` but uses `response_format: { type: 'json_object' }`
+   * instead of the strict `json_schema` mode. The schema is still sent to the
+   * model, but embedded inside the user prompt as a reference. Callers should
+   * rely on their own schema validation (Zod) for the returned data.
+   *
+   * Use this for flexible schemas that include `format`, `pattern`, `minimum`,
+   * `maximum`, `additionalProperties: true`, or partial `required` lists — all of
+   * which OpenAI's strict mode rejects with a 400.
+   */
+  jsonCompletion<T = unknown>(
+    req: StructuredCompletionRequest,
+  ): Promise<StructuredCompletionResult<T>>;
 }
 
 const DEFAULT_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
@@ -127,14 +140,42 @@ export function createAIClient(opts: AIClientOptions): AIClient {
     };
   }
 
+  async function runWithRetries<T>(
+    body: Record<string, unknown>,
+  ): Promise<StructuredCompletionResult<T>> {
+    if (opts.budget && opts.budget.usedTokens >= opts.budget.maxTokens) {
+      throw new AIBudgetExceededError();
+    }
+
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        return (await callOnce(body)) as StructuredCompletionResult<T>;
+      } catch (err) {
+        lastError = err;
+        if (err instanceof AIAuthError) throw err;
+        if (err instanceof AIBudgetExceededError) throw err;
+        if (err instanceof AIRateLimitError) {
+          if (attempt >= maxRetries) throw err;
+          await new Promise((r) => setTimeout(r, err.retryAfterMs));
+          continue;
+        }
+        if (err instanceof AIServerError && err.status >= 500) {
+          if (attempt >= maxRetries) throw err;
+          const backoff = retryBaseMs * Math.pow(2, attempt);
+          await new Promise((r) => setTimeout(r, backoff));
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError;
+  }
+
   return {
     async structuredCompletion<T = unknown>(
       req: StructuredCompletionRequest,
     ): Promise<StructuredCompletionResult<T>> {
-      if (opts.budget && opts.budget.usedTokens >= opts.budget.maxTokens) {
-        throw new AIBudgetExceededError();
-      }
-
       const body = {
         model: opts.model,
         messages: [
@@ -151,30 +192,24 @@ export function createAIClient(opts: AIClientOptions): AIClient {
         },
         temperature: req.temperature ?? 0,
       };
+      return runWithRetries<T>(body);
+    },
 
-      let lastError: unknown;
-      for (let attempt = 0; attempt <= maxRetries; attempt++) {
-        try {
-          return (await callOnce(body)) as StructuredCompletionResult<T>;
-        } catch (err) {
-          lastError = err;
-          if (err instanceof AIAuthError) throw err;
-          if (err instanceof AIBudgetExceededError) throw err;
-          if (err instanceof AIRateLimitError) {
-            if (attempt >= maxRetries) throw err;
-            await new Promise((r) => setTimeout(r, err.retryAfterMs));
-            continue;
-          }
-          if (err instanceof AIServerError && err.status >= 500) {
-            if (attempt >= maxRetries) throw err;
-            const backoff = retryBaseMs * Math.pow(2, attempt);
-            await new Promise((r) => setTimeout(r, backoff));
-            continue;
-          }
-          throw err;
-        }
-      }
-      throw lastError;
+    async jsonCompletion<T = unknown>(
+      req: StructuredCompletionRequest,
+    ): Promise<StructuredCompletionResult<T>> {
+      const schemaBlock = JSON.stringify(req.schema, null, 2);
+      const userWithSchema = `Respond with JSON matching this schema (name: ${req.schemaName}):\n${schemaBlock}\n\nInput:\n${req.user}`;
+      const body = {
+        model: opts.model,
+        messages: [
+          { role: 'system', content: req.system },
+          { role: 'user', content: userWithSchema },
+        ],
+        response_format: { type: 'json_object' },
+        temperature: req.temperature ?? 0,
+      };
+      return runWithRetries<T>(body);
     },
   };
 }

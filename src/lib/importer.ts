@@ -20,7 +20,7 @@ export interface ImportInput {
 }
 
 export interface ImporterDeps {
-  ai: Pick<AIClient, 'structuredCompletion'>;
+  ai: Pick<AIClient, 'jsonCompletion'>;
 }
 
 export type ImportResult =
@@ -74,7 +74,7 @@ export async function importRawData(
   const userText = await toPromptText(input);
   const schema = toOpenAIJsonSchema();
 
-  const completion = await deps.ai.structuredCompletion({
+  const completion = await deps.ai.jsonCompletion({
     system: SYSTEM_PROMPT,
     user: userText,
     schema,

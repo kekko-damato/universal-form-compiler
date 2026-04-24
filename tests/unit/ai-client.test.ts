@@ -157,4 +157,67 @@ describe('ai-client', () => {
       }),
     ).rejects.toBeInstanceOf(AIBudgetExceededError);
   });
+
+  describe('jsonCompletion', () => {
+    it('uses response_format json_object and embeds the schema in the user message', async () => {
+      const spy = mockFetchOnce({
+        choices: [
+          { message: { content: '{"hello":"world"}' } },
+        ],
+        usage: { prompt_tokens: 5, completion_tokens: 3, total_tokens: 8 },
+      });
+
+      const client = createAIClient({
+        apiKey: 'sk-test',
+        model: 'gpt-4o-mini',
+      });
+
+      const schema = {
+        type: 'object',
+        properties: { hello: { type: 'string' } },
+      };
+
+      const result = await client.jsonCompletion({
+        system: 'You are a test.',
+        user: 'Give me a greeting',
+        schema,
+        schemaName: 'greeting',
+      });
+
+      expect(spy).toHaveBeenCalledTimes(1);
+      const [, init] = spy.mock.calls[0]!;
+      const body = JSON.parse(String(init?.body));
+      expect(body.response_format).toEqual({ type: 'json_object' });
+      // Schema must NOT leak into response_format (that's what trips strict mode).
+      expect(body.response_format.json_schema).toBeUndefined();
+      // System prompt is untouched.
+      expect(body.messages[0]).toEqual({
+        role: 'system',
+        content: 'You are a test.',
+      });
+      // User prompt must contain the schema JSON, the schema name, and the original user text.
+      const userContent = body.messages[1].content as string;
+      expect(userContent).toContain('greeting');
+      expect(userContent).toContain('"hello"');
+      expect(userContent).toContain('Give me a greeting');
+      expect(result.data).toEqual({ hello: 'world' });
+      expect(result.usage.total_tokens).toBe(8);
+    });
+
+    it('surfaces AIBudgetExceededError on jsonCompletion when budget exceeded', async () => {
+      const client = createAIClient({
+        apiKey: 'sk-test',
+        model: 'gpt-4o-mini',
+        budget: { maxTokens: 10, usedTokens: 11 },
+      });
+      await expect(
+        client.jsonCompletion({
+          system: 's',
+          user: 'u',
+          schema: { type: 'object' },
+          schemaName: 'x',
+        }),
+      ).rejects.toBeInstanceOf(AIBudgetExceededError);
+    });
+  });
 });
