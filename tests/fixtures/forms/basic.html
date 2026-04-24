@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+  <head><title>Basic form</title></head>
+  <body>
+    <h1>Registration</h1>
+    <form id="reg-form">
+      <label for="first-name">First name</label>
+      <input id="first-name" name="first_name" type="text" required />
+
+      <label>
+        Email address
+        <input name="email" type="email" placeholder="you@example.com" />
+      </label>
+
+      <label for="pw">Password</label>
+      <input id="pw" name="password" type="password" autocomplete="new-password" />
+
+      <label for="country">Country</label>
+      <select id="country" name="country">
+        <option value="">-- choose --</option>
+        <option value="IT">Italy</option>
+        <option value="US">United States</option>
+      </select>
+
+      <fieldset>
+        <legend>Newsletter</legend>
+        <label><input type="radio" name="newsletter" value="yes" /> Yes</label>
+        <label><input type="radio" name="newsletter" value="no" /> No</label>
+      </fieldset>
+
+      <label>
+        <input type="checkbox" name="terms" /> I accept the terms
+      </label>
+
+      <label for="bio">Short bio</label>
+      <textarea id="bio" name="bio" rows="4"></textarea>
+
+      <label for="cv">CV</label>
+      <input id="cv" name="cv" type="file" />
+
+      <button type="submit">Register</button>
+    </form>
+  </body>
+</html>

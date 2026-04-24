@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+  <head><title>Azienda</title></head>
+  <body>
+    <h1>Iscrizione azienda</h1>
+    <form id="company-form">
+      <label for="ragione-sociale">Ragione Sociale</label>
+      <input id="ragione-sociale" name="ragione_sociale" type="text" required />
+
+      <label for="piva">Partita IVA</label>
+      <input id="piva" name="vat" type="text" pattern="\d{11}" />
+
+      <label for="cf">Codice Fiscale</label>
+      <input id="cf" name="tax_code" type="text" />
+
+      <label for="pec">PEC</label>
+      <input id="pec" name="pec" type="email" />
+
+      <label for="telefono">Telefono</label>
+      <input id="telefono" name="phone" type="tel" />
+
+      <label for="forma">Forma giuridica</label>
+      <select id="forma" name="legal_form">
+        <option value="">-- Seleziona --</option>
+        <option value="srl">S.r.l.</option>
+        <option value="spa">S.p.A.</option>
+        <option value="snc">S.n.c.</option>
+      </select>
+
+      <label for="dipendenti">Numero dipendenti</label>
+      <input id="dipendenti" name="employees" type="number" min="0" />
+
+      <label for="indirizzo">Sede legale</label>
+      <textarea id="indirizzo" name="address"></textarea>
+
+      <button type="submit">Invia</button>
+    </form>
+  </body>
+</html>
