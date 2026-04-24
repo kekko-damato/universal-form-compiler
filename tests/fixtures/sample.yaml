@@ -1,0 +1,8 @@
+person:
+  first_name: Antonio
+  last_name: Rossi
+contact:
+  email: antonio.rossi@example.com
+  phone: "+39 333 1234567"
+company:
+  vat_number: "12345678901"
