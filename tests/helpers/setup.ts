@@ -1,11 +1,6 @@
 import { vi, beforeEach } from 'vitest';
 import { createChromeStorageMock } from './chrome-storage-mock';
 
-declare global {
-  // eslint-disable-next-line no-var
-  var chrome: typeof globalThis.chrome;
-}
-
 beforeEach(() => {
   (globalThis as unknown as { chrome: unknown }).chrome = {
     storage: {
