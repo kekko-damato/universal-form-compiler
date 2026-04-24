@@ -1,202 +1,76 @@
-import {
-  deriveKey,
-  encrypt,
-  decrypt,
-  randomBytes,
-  toBase64,
-  fromBase64,
-  type EncryptedBlob,
-} from './crypto';
 import { readKey, writeKey, removeKey } from './storage';
 import type { CanonicalData } from './canonical-schema';
 
+// Passwordless vault. Data is stored as plain JSON in chrome.storage.local.
+// The user explicitly opted out of the encryption / master-password flow —
+// this is a single-user Chrome profile extension and the overhead was not
+// worth it. If you need privacy, rely on the OS account boundary.
+
 export const VAULT_STORAGE_KEY = 'ufc_vault_v1';
-export const MIN_MASTER_PASSWORD_LENGTH = 12;
-
-const PBKDF2_ITERATIONS = 600_000;
-
-export interface VaultBlob {
-  v: 1;
-  kdf: 'pbkdf2';
-  kdfParams: { iterations: number; hash: 'SHA-256' };
-  salt: string;       // base64
-  iv: string;         // base64
-  ciphertext: string; // base64
-}
-
-export interface VaultData {
-  version: 1;
-  createdAt: string;  // ISO timestamp
-  data: Record<string, unknown>; // canonical data added in Phase 1b
-}
-
-export async function hasVault(): Promise<boolean> {
-  const raw = await readKey<VaultBlob>(VAULT_STORAGE_KEY);
-  return raw !== undefined;
-}
-
-export async function readVaultBlob(): Promise<VaultBlob | null> {
-  const raw = await readKey<VaultBlob>(VAULT_STORAGE_KEY);
-  return raw ?? null;
-}
-
-export async function createVault(masterPassword: string): Promise<void> {
-  if (masterPassword.length < MIN_MASTER_PASSWORD_LENGTH) {
-    throw new Error(
-      `Master password must be at least ${MIN_MASTER_PASSWORD_LENGTH} characters`,
-    );
-  }
-  if (await hasVault()) {
-    throw new Error('Vault already exists');
-  }
-
-  const salt = randomBytes(32);
-  const key = await deriveKey(masterPassword, salt, {
-    iterations: PBKDF2_ITERATIONS,
-    hash: 'SHA-256',
-  });
-
-  const initial: VaultData = {
-    version: 1,
-    createdAt: new Date().toISOString(),
-    data: {},
-  };
-  const plaintext = new TextEncoder().encode(JSON.stringify(initial));
-  const encrypted = await encrypt(key, plaintext);
-
-  const blob: VaultBlob = {
-    v: 1,
-    kdf: 'pbkdf2',
-    kdfParams: { iterations: PBKDF2_ITERATIONS, hash: 'SHA-256' },
-    salt: toBase64(salt),
-    iv: toBase64(encrypted.iv),
-    ciphertext: toBase64(encrypted.ciphertext),
-  };
-  await writeKey(VAULT_STORAGE_KEY, blob);
-}
-
-export class VaultLockedError extends Error {
-  constructor() {
-    super('No vault found');
-    this.name = 'VaultLockedError';
-  }
-}
-
-export class WrongPasswordError extends Error {
-  constructor() {
-    super('Wrong master password');
-    this.name = 'WrongPasswordError';
-  }
-}
-
-export async function openVault(masterPassword: string): Promise<VaultData> {
-  const blob = await readVaultBlob();
-  if (!blob) throw new VaultLockedError();
-
-  const salt = fromBase64(blob.salt);
-  const key = await deriveKey(masterPassword, salt, {
-    iterations: blob.kdfParams.iterations,
-    hash: blob.kdfParams.hash,
-  });
-
-  const encryptedBlob: EncryptedBlob = {
-    iv: fromBase64(blob.iv),
-    ciphertext: fromBase64(blob.ciphertext),
-  };
-
-  let plaintext: Uint8Array;
-  try {
-    plaintext = await decrypt(key, encryptedBlob);
-  } catch {
-    throw new WrongPasswordError();
-  }
-
-  const json = new TextDecoder().decode(plaintext);
-  return JSON.parse(json) as VaultData;
-}
-
-/**
- * Re-encrypts the vault with fresh IV using the given master password.
- * Verifies the password by attempting decryption first.
- */
-export async function writeVaultData(
-  data: VaultData,
-  masterPassword: string,
-): Promise<void> {
-  // Verify password by re-reading existing blob
-  await openVault(masterPassword); // throws if wrong
-
-  const blob = await readVaultBlob();
-  if (!blob) throw new VaultLockedError();
-
-  const salt = fromBase64(blob.salt);
-  const key = await deriveKey(masterPassword, salt, {
-    iterations: blob.kdfParams.iterations,
-    hash: blob.kdfParams.hash,
-  });
-
-  const plaintext = new TextEncoder().encode(JSON.stringify(data));
-  const encrypted = await encrypt(key, plaintext);
-
-  const updated: VaultBlob = {
-    ...blob,
-    iv: toBase64(encrypted.iv),
-    ciphertext: toBase64(encrypted.ciphertext),
-  };
-  await writeKey(VAULT_STORAGE_KEY, updated);
-}
-
-export async function deleteVault(masterPassword: string): Promise<void> {
-  await openVault(masterPassword); // verifies password; throws otherwise
-  await removeKey(VAULT_STORAGE_KEY);
-}
 
 export interface SecretConfig {
   apiKey: string;
   model: string;
 }
 
-interface ExtendedVaultData extends VaultData {
-  data: Record<string, unknown> & {
+export interface VaultData {
+  version: 1;
+  createdAt: string; // ISO timestamp
+  data: {
     secretConfig?: SecretConfig;
     canonical?: CanonicalData;
   };
 }
 
-function asExtended(data: VaultData): ExtendedVaultData {
-  return data as ExtendedVaultData;
+function emptyVault(): VaultData {
+  return {
+    version: 1,
+    createdAt: new Date().toISOString(),
+    data: {},
+  };
 }
 
-export async function writeSecretConfig(
-  config: SecretConfig,
-  masterPassword: string,
-): Promise<void> {
-  const current = await openVault(masterPassword);
-  const ext = asExtended(current);
-  ext.data = { ...(ext.data ?? {}), secretConfig: config };
-  await writeVaultData(ext, masterPassword);
+/**
+ * True when the vault key has ever been written AND holds canonical data.
+ * (Merely having a SecretConfig doesn't count as "has data" — the setup
+ * wizard is considered complete once the user has imported personal data.)
+ */
+export async function hasVaultData(): Promise<boolean> {
+  const raw = await readKey<VaultData>(VAULT_STORAGE_KEY);
+  return raw?.data?.canonical != null;
 }
 
-export async function readSecretConfig(
-  masterPassword: string,
-): Promise<SecretConfig | null> {
-  const current = asExtended(await openVault(masterPassword));
-  return current.data?.secretConfig ?? null;
+export async function readAll(): Promise<VaultData> {
+  const raw = await readKey<VaultData>(VAULT_STORAGE_KEY);
+  return raw ?? emptyVault();
 }
 
-export async function writeCanonicalData(
-  data: CanonicalData,
-  masterPassword: string,
-): Promise<void> {
-  const current = await openVault(masterPassword);
-  const ext = asExtended(current);
-  ext.data = { ...(ext.data ?? {}), canonical: data };
-  await writeVaultData(ext, masterPassword);
+export async function writeAll(data: VaultData): Promise<void> {
+  await writeKey(VAULT_STORAGE_KEY, data);
 }
 
-export async function readCanonicalData(
-  masterPassword: string,
-): Promise<CanonicalData | null> {
-  const current = asExtended(await openVault(masterPassword));
-  return current.data?.canonical ?? null;
+export async function writeSecretConfig(config: SecretConfig): Promise<void> {
+  const current = await readAll();
+  current.data.secretConfig = config;
+  await writeAll(current);
+}
+
+export async function readSecretConfig(): Promise<SecretConfig | null> {
+  const current = await readAll();
+  return current.data.secretConfig ?? null;
+}
+
+export async function writeCanonicalData(data: CanonicalData): Promise<void> {
+  const current = await readAll();
+  current.data.canonical = data;
+  await writeAll(current);
+}
+
+export async function readCanonicalData(): Promise<CanonicalData | null> {
+  const current = await readAll();
+  return current.data.canonical ?? null;
+}
+
+export async function resetVault(): Promise<void> {
+  await removeKey(VAULT_STORAGE_KEY);
 }
