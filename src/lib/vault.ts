@@ -1,6 +1,7 @@
 import {
   deriveKey,
   encrypt,
+  decrypt,
   randomBytes,
   toBase64,
   fromBase64,
@@ -71,4 +72,44 @@ export async function createVault(masterPassword: string): Promise<void> {
     ciphertext: toBase64(encrypted.ciphertext),
   };
   await writeKey(VAULT_STORAGE_KEY, blob);
+}
+
+export class VaultLockedError extends Error {
+  constructor() {
+    super('No vault found');
+    this.name = 'VaultLockedError';
+  }
+}
+
+export class WrongPasswordError extends Error {
+  constructor() {
+    super('Wrong master password');
+    this.name = 'WrongPasswordError';
+  }
+}
+
+export async function openVault(masterPassword: string): Promise<VaultData> {
+  const blob = await readVaultBlob();
+  if (!blob) throw new VaultLockedError();
+
+  const salt = fromBase64(blob.salt);
+  const key = await deriveKey(masterPassword, salt, {
+    iterations: blob.kdfParams.iterations,
+    hash: blob.kdfParams.hash,
+  });
+
+  const encryptedBlob: EncryptedBlob = {
+    iv: fromBase64(blob.iv),
+    ciphertext: fromBase64(blob.ciphertext),
+  };
+
+  let plaintext: Uint8Array;
+  try {
+    plaintext = await decrypt(key, encryptedBlob);
+  } catch {
+    throw new WrongPasswordError();
+  }
+
+  const json = new TextDecoder().decode(plaintext);
+  return JSON.parse(json) as VaultData;
 }

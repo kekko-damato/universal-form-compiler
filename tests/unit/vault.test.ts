@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createVault, hasVault, readVaultBlob, VAULT_STORAGE_KEY } from '@/lib/vault';
+import { openVault, VaultLockedError, WrongPasswordError } from '@/lib/vault';
 import { clearAll, readKey } from '@/lib/storage';
 
 describe('vault: createVault', () => {
@@ -38,5 +39,32 @@ describe('vault: createVault', () => {
   it('createVault throws if vault already exists', async () => {
     await createVault('pw1234567890abc');
     await expect(createVault('pw1234567890abc')).rejects.toThrow(/already exists/i);
+  });
+});
+
+describe('vault: openVault', () => {
+  beforeEach(async () => {
+    await clearAll();
+  });
+
+  it('decrypts vault with correct password and returns VaultData', async () => {
+    await createVault('correct password here');
+    const data = await openVault('correct password here');
+    expect(data.version).toBe(1);
+    expect(data.data).toEqual({});
+    expect(typeof data.createdAt).toBe('string');
+  });
+
+  it('throws WrongPasswordError on incorrect password', async () => {
+    await createVault('correct password here');
+    await expect(openVault('wrong password yes')).rejects.toBeInstanceOf(
+      WrongPasswordError,
+    );
+  });
+
+  it('throws VaultLockedError when no vault exists', async () => {
+    await expect(openVault('any password')).rejects.toBeInstanceOf(
+      VaultLockedError,
+    );
   });
 });
