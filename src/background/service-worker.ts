@@ -1,17 +1,11 @@
 import {
-  hasVault,
-  createVault,
-  openVault,
-  deleteVault,
-  WrongPasswordError,
-  VaultLockedError,
+  hasVaultData,
+  resetVault,
   readSecretConfig,
   writeSecretConfig,
   readCanonicalData,
   writeCanonicalData,
 } from '@/lib/vault';
-import { createSessionManager } from './session';
-import { createRateLimiter } from './rate-limiter';
 import {
   createAIClient,
   AIAuthError,
@@ -29,21 +23,6 @@ import type {
   PopupResponse,
   VaultState,
 } from '@/types/messages';
-
-const SESSION_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
-
-const session = createSessionManager({
-  timeoutMs: SESSION_TIMEOUT_MS,
-  onStateChange: (state) => {
-    console.log('[UFC] session', state);
-  },
-});
-
-const unlockLimiter = createRateLimiter({
-  maxAttempts: 5,
-  windowMs: 5 * 60_000,
-  baseLockoutMs: 30_000,
-});
 
 const DEFAULT_MODEL = 'gpt-4o-mini';
 
@@ -68,12 +47,6 @@ function formatFromFilename(filename: string): ImportFormat {
   return 'text';
 }
 
-function requirePassword(): string {
-  const pw = session.getPassword();
-  if (!pw) throw new Error('Vault is locked');
-  return pw;
-}
-
 function formatAIError(err: unknown): string {
   if (err instanceof AIAuthError) return 'OpenAI API key is invalid';
   if (err instanceof AIBudgetExceededError) return 'AI budget exceeded';
@@ -83,10 +56,7 @@ function formatAIError(err: unknown): string {
 }
 
 async function computeVaultState(): Promise<VaultState> {
-  if (!(await hasVault())) return { kind: 'no_vault' };
-  return session.getState() === 'unlocked'
-    ? { kind: 'unlocked' }
-    : { kind: 'locked' };
+  return (await hasVaultData()) ? { kind: 'has_data' } : { kind: 'no_data' };
 }
 
 async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
@@ -94,66 +64,12 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
     case 'vault/getState':
       return { state: await computeVaultState() };
 
-    case 'vault/create':
+    case 'vault/reset':
       try {
-        await createVault(req.masterPassword);
-        session.unlock(req.masterPassword);
+        await resetVault();
+        pendingProposal = null;
         return { ok: true };
       } catch (err) {
-        return {
-          ok: false,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        };
-      }
-
-    case 'vault/unlock': {
-      const gate = unlockLimiter.check();
-      if (!gate.allowed) {
-        return {
-          ok: false,
-          error: `Too many attempts, wait ${Math.ceil(gate.lockoutMs / 1000)}s`,
-          lockoutMs: gate.lockoutMs,
-          attemptsRemaining: 0,
-        };
-      }
-      try {
-        await openVault(req.masterPassword);
-        unlockLimiter.recordSuccess();
-        session.unlock(req.masterPassword);
-        return { ok: true };
-      } catch (err) {
-        if (err instanceof WrongPasswordError) {
-          unlockLimiter.recordFailure();
-          const next = unlockLimiter.check();
-          return {
-            ok: false,
-            error: 'Wrong master password',
-            attemptsRemaining: next.allowed ? next.attemptsRemaining : 0,
-          };
-        }
-        if (err instanceof VaultLockedError) {
-          return { ok: false, error: 'No vault exists' };
-        }
-        return {
-          ok: false,
-          error: err instanceof Error ? err.message : 'Unknown error',
-        };
-      }
-    }
-
-    case 'vault/lock':
-      session.lock();
-      return { ok: true };
-
-    case 'vault/delete':
-      try {
-        await deleteVault(req.masterPassword);
-        session.lock();
-        return { ok: true };
-      } catch (err) {
-        if (err instanceof WrongPasswordError) {
-          return { ok: false, error: 'Wrong master password' };
-        }
         return {
           ok: false,
           error: err instanceof Error ? err.message : 'Unknown error',
@@ -162,8 +78,7 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
 
     case 'settings/get': {
       try {
-        const pw = requirePassword();
-        const cfg = await readSecretConfig(pw);
+        const cfg = await readSecretConfig();
         return {
           apiKey: cfg?.apiKey ?? null,
           model: cfg?.model ?? DEFAULT_MODEL,
@@ -175,11 +90,7 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
 
     case 'settings/save': {
       try {
-        const pw = requirePassword();
-        await writeSecretConfig(
-          { apiKey: req.apiKey, model: req.model },
-          pw,
-        );
+        await writeSecretConfig({ apiKey: req.apiKey, model: req.model });
         return { ok: true };
       } catch (err) {
         return {
@@ -191,8 +102,7 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
 
     case 'import/run': {
       try {
-        const pw = requirePassword();
-        const cfg = await readSecretConfig(pw);
+        const cfg = await readSecretConfig();
         if (!cfg?.apiKey) {
           return { ok: false, error: 'OpenAI API key not configured' };
         }
@@ -223,8 +133,7 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
 
     case 'canonical/get': {
       try {
-        const pw = requirePassword();
-        const data = await readCanonicalData(pw);
+        const data = await readCanonicalData();
         return { data };
       } catch {
         return { data: null };
@@ -233,10 +142,8 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
 
     case 'canonical/save': {
       try {
-        const pw = requirePassword();
         await writeCanonicalData(
           req.data as Parameters<typeof writeCanonicalData>[0],
-          pw,
         );
         return { ok: true };
       } catch (err) {
@@ -249,12 +156,11 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
 
     case 'compile/start': {
       try {
-        const pw = requirePassword();
-        const cfg = await readSecretConfig(pw);
+        const cfg = await readSecretConfig();
         if (!cfg?.apiKey) {
           return { ok: false, error: 'OpenAI API key not configured' };
         }
-        const canonical = await readCanonicalData(pw);
+        const canonical = await readCanonicalData();
         if (!canonical) {
           return {
             ok: false,
@@ -316,8 +222,7 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
 
     case 'compile/confirm': {
       try {
-        const pw = requirePassword();
-        const canonical = await readCanonicalData(pw);
+        const canonical = await readCanonicalData();
         if (!canonical) return { ok: false, error: 'No data' };
         if (!pendingProposal) return { ok: false, error: 'No pending proposal' };
         const mappings = req.mappings as Mapping[];
@@ -360,9 +265,6 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
 
 chrome.runtime.onMessage.addListener(
   (req: PopupRequest, _sender, sendResponse) => {
-    // Refresh session activity on any message
-    session.touch();
-
     handleRequest(req)
       .then((res) => sendResponse(res))
       .catch((err) => {
