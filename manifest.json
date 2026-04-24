@@ -25,7 +25,17 @@
     "scripting"
   ],
   "host_permissions": [
-    "https://api.openai.com/*"
+    "https://api.openai.com/*",
+    "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content/content-entry.ts"],
+      "css": ["src/content/content-styles.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
