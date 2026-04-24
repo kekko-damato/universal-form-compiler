@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveKey, randomBytes, encrypt, decrypt, type EncryptedBlob } from '@/lib/crypto';
+import { deriveKey, randomBytes, encrypt, decrypt, toBase64, fromBase64, type EncryptedBlob } from '@/lib/crypto';
 
 describe('deriveKey', () => {
   it('derives a 256-bit CryptoKey from a password + salt via PBKDF2', async () => {
@@ -98,5 +98,26 @@ describe('encrypt / decrypt', () => {
     };
     tampered.ciphertext[0]! ^= 0x01;
     await expect(decrypt(key, tampered)).rejects.toThrow();
+  });
+});
+
+describe('base64 helpers', () => {
+  it('roundtrips Uint8Array through base64', () => {
+    const original = new Uint8Array([0, 1, 2, 3, 255, 128, 64]);
+    const encoded = toBase64(original);
+    expect(typeof encoded).toBe('string');
+    const decoded = fromBase64(encoded);
+    expect(Array.from(decoded)).toEqual(Array.from(original));
+  });
+
+  it('handles empty array', () => {
+    expect(toBase64(new Uint8Array(0))).toBe('');
+    expect(fromBase64('').length).toBe(0);
+  });
+
+  it('handles 32-byte random data', () => {
+    const original = randomBytes(32);
+    const roundtripped = fromBase64(toBase64(original));
+    expect(Array.from(roundtripped)).toEqual(Array.from(original));
   });
 });
