@@ -2,44 +2,16 @@
 // Each request has a matching response type.
 
 export type VaultState =
-  | { kind: 'no_vault' }
-  | { kind: 'locked' }
-  | { kind: 'unlocked' };
+  | { kind: 'no_data' }
+  | { kind: 'has_data' };
 
 // --- Requests from popup to background ---
 
 export type GetVaultStateRequest = { type: 'vault/getState' };
 export type GetVaultStateResponse = { state: VaultState };
 
-export type CreateVaultRequest = {
-  type: 'vault/create';
-  masterPassword: string;
-};
-export type CreateVaultResponse =
-  | { ok: true }
-  | { ok: false; error: string };
-
-export type UnlockVaultRequest = {
-  type: 'vault/unlock';
-  masterPassword: string;
-};
-export type UnlockVaultResponse =
-  | { ok: true }
-  | {
-      ok: false;
-      error: string;
-      attemptsRemaining?: number;
-      lockoutMs?: number;
-    };
-
-export type LockVaultRequest = { type: 'vault/lock' };
-export type LockVaultResponse = { ok: true };
-
-export type DeleteVaultRequest = {
-  type: 'vault/delete';
-  masterPassword: string;
-};
-export type DeleteVaultResponse =
+export type ResetVaultRequest = { type: 'vault/reset' };
+export type ResetVaultResponse =
   | { ok: true }
   | { ok: false; error: string };
 
@@ -110,10 +82,7 @@ export type ClearMarksResponse = { ok: true };
 
 export type PopupRequest =
   | GetVaultStateRequest
-  | CreateVaultRequest
-  | UnlockVaultRequest
-  | LockVaultRequest
-  | DeleteVaultRequest
+  | ResetVaultRequest
   | GetSettingsRequest
   | SaveSettingsRequest
   | ImportFileRequest
@@ -125,10 +94,7 @@ export type PopupRequest =
 
 export type PopupResponse =
   | GetVaultStateResponse
-  | CreateVaultResponse
-  | UnlockVaultResponse
-  | LockVaultResponse
-  | DeleteVaultResponse
+  | ResetVaultResponse
   | GetSettingsResponse
   | SaveSettingsResponse
   | ImportFileResponse
@@ -141,10 +107,7 @@ export type PopupResponse =
 // Helper to map request → response type at compile time.
 export type ResponseFor<R extends PopupRequest> =
   R extends GetVaultStateRequest ? GetVaultStateResponse :
-  R extends CreateVaultRequest ? CreateVaultResponse :
-  R extends UnlockVaultRequest ? UnlockVaultResponse :
-  R extends LockVaultRequest ? LockVaultResponse :
-  R extends DeleteVaultRequest ? DeleteVaultResponse :
+  R extends ResetVaultRequest ? ResetVaultResponse :
   R extends GetSettingsRequest ? GetSettingsResponse :
   R extends SaveSettingsRequest ? SaveSettingsResponse :
   R extends ImportFileRequest ? ImportFileResponse :
