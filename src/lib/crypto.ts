@@ -40,3 +40,31 @@ export async function deriveKey(
     ['encrypt', 'decrypt'],
   );
 }
+
+export interface EncryptedBlob {
+  iv: Uint8Array;
+  ciphertext: Uint8Array;
+}
+
+export async function encrypt(
+  key: CryptoKey,
+  plaintext: Uint8Array,
+): Promise<EncryptedBlob> {
+  const iv = randomBytes(12);
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv as BufferSource }, key, plaintext as BufferSource),
+  );
+  return { iv, ciphertext };
+}
+
+export async function decrypt(
+  key: CryptoKey,
+  blob: EncryptedBlob,
+): Promise<Uint8Array> {
+  const result = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: blob.iv as BufferSource },
+    key,
+    blob.ciphertext as BufferSource,
+  );
+  return new Uint8Array(result);
+}

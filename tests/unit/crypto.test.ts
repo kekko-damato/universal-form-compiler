@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { deriveKey, randomBytes } from '@/lib/crypto';
+import { deriveKey, randomBytes, encrypt, decrypt, type EncryptedBlob } from '@/lib/crypto';
 
 describe('deriveKey', () => {
   it('derives a 256-bit CryptoKey from a password + salt via PBKDF2', async () => {
@@ -46,5 +46,57 @@ describe('randomBytes', () => {
     const r = randomBytes(16);
     expect(r).toBeInstanceOf(Uint8Array);
     expect(r.length).toBe(16);
+  });
+});
+
+describe('encrypt / decrypt', () => {
+  it('encrypts and decrypts plaintext roundtrip', async () => {
+    const salt = randomBytes(32);
+    const key = await deriveKey('pass', salt, { iterations: 10_000 });
+    const plaintext = new TextEncoder().encode('hello vault');
+
+    const blob = await encrypt(key, plaintext);
+    expect(blob.ciphertext).toBeInstanceOf(Uint8Array);
+    expect(blob.iv).toBeInstanceOf(Uint8Array);
+    expect(blob.iv.length).toBe(12);
+
+    const decrypted = await decrypt(key, blob);
+    expect(new TextDecoder().decode(decrypted)).toBe('hello vault');
+  });
+
+  it('different encryptions of same plaintext produce different ciphertexts (random IV)', async () => {
+    const salt = randomBytes(32);
+    const key = await deriveKey('pass', salt, { iterations: 10_000 });
+    const plaintext = new TextEncoder().encode('same message');
+
+    const b1 = await encrypt(key, plaintext);
+    const b2 = await encrypt(key, plaintext);
+    expect(Array.from(b1.iv)).not.toEqual(Array.from(b2.iv));
+    expect(Array.from(b1.ciphertext)).not.toEqual(Array.from(b2.ciphertext));
+  });
+
+  it('decrypt with wrong key throws', async () => {
+    const salt = randomBytes(32);
+    const k1 = await deriveKey('right', salt, { iterations: 10_000 });
+    const k2 = await deriveKey('wrong', salt, { iterations: 10_000 });
+    const plaintext = new TextEncoder().encode('secret');
+
+    const blob = await encrypt(k1, plaintext);
+    await expect(decrypt(k2, blob)).rejects.toThrow();
+  });
+
+  it('decrypt with tampered ciphertext throws', async () => {
+    const salt = randomBytes(32);
+    const key = await deriveKey('pass', salt, { iterations: 10_000 });
+    const plaintext = new TextEncoder().encode('authentic');
+
+    const blob = await encrypt(key, plaintext);
+    // Flip a bit in ciphertext
+    const tampered: EncryptedBlob = {
+      iv: blob.iv,
+      ciphertext: new Uint8Array(blob.ciphertext),
+    };
+    tampered.ciphertext[0]! ^= 0x01;
+    await expect(decrypt(key, tampered)).rejects.toThrow();
   });
 });
