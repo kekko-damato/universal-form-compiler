@@ -25,7 +25,12 @@ export type UnlockVaultRequest = {
 };
 export type UnlockVaultResponse =
   | { ok: true }
-  | { ok: false; error: string; attemptsRemaining?: number };
+  | {
+      ok: false;
+      error: string;
+      attemptsRemaining?: number;
+      lockoutMs?: number;
+    };
 
 export type LockVaultRequest = { type: 'vault/lock' };
 export type LockVaultResponse = { ok: true };

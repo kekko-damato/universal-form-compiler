@@ -7,6 +7,7 @@ import {
   VaultLockedError,
 } from '@/lib/vault';
 import { createSessionManager } from './session';
+import { createRateLimiter } from './rate-limiter';
 import type {
   PopupRequest,
   PopupResponse,
@@ -20,6 +21,12 @@ const session = createSessionManager({
   onStateChange: (state) => {
     console.log('[UFC] session', state);
   },
+});
+
+const unlockLimiter = createRateLimiter({
+  maxAttempts: 5,
+  windowMs: 5 * 60_000,
+  baseLockoutMs: 30_000,
 });
 
 async function computeVaultState(): Promise<VaultState> {
@@ -46,14 +53,30 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
         };
       }
 
-    case 'vault/unlock':
+    case 'vault/unlock': {
+      const gate = unlockLimiter.check();
+      if (!gate.allowed) {
+        return {
+          ok: false,
+          error: `Too many attempts, wait ${Math.ceil(gate.lockoutMs / 1000)}s`,
+          lockoutMs: gate.lockoutMs,
+          attemptsRemaining: 0,
+        };
+      }
       try {
         await openVault(req.masterPassword);
+        unlockLimiter.recordSuccess();
         session.unlock(req.masterPassword);
         return { ok: true };
       } catch (err) {
         if (err instanceof WrongPasswordError) {
-          return { ok: false, error: 'Wrong master password' };
+          unlockLimiter.recordFailure();
+          const next = unlockLimiter.check();
+          return {
+            ok: false,
+            error: 'Wrong master password',
+            attemptsRemaining: next.allowed ? next.attemptsRemaining : 0,
+          };
         }
         if (err instanceof VaultLockedError) {
           return { ok: false, error: 'No vault exists' };
@@ -63,6 +86,7 @@ async function handleRequest(req: PopupRequest): Promise<PopupResponse> {
           error: err instanceof Error ? err.message : 'Unknown error',
         };
       }
+    }
 
     case 'vault/lock':
       session.lock();

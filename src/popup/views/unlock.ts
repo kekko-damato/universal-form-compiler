@@ -40,7 +40,14 @@ export function createUnlockView(
           await onUnlocked();
         } else {
           err.hidden = false;
-          err.textContent = res.error;
+          let msg = res.error;
+          if (typeof res.attemptsRemaining === 'number' && res.attemptsRemaining > 0) {
+            msg += ` (${res.attemptsRemaining} tentativi rimasti)`;
+          }
+          if (typeof res.lockoutMs === 'number') {
+            msg += ` — blocco attivo per ${Math.ceil(res.lockoutMs / 1000)}s`;
+          }
+          err.textContent = msg;
           pw.value = '';
           pw.focus();
           btn.disabled = false;
