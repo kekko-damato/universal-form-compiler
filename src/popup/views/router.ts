@@ -1,4 +1,4 @@
-export type ViewId = 'setup-password' | 'unlock' | 'main';
+export type ViewId = 'setup-wizard' | 'unlock' | 'main' | 'settings';
 
 export interface ViewRenderer {
   render(container: HTMLElement): void | Promise<void>;
