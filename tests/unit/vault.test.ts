@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import type { VaultData } from '@/lib/vault';
 import { createVault, hasVault, readVaultBlob, VAULT_STORAGE_KEY } from '@/lib/vault';
 import { openVault, VaultLockedError, WrongPasswordError } from '@/lib/vault';
+import { writeVaultData } from '@/lib/vault';
 import { clearAll, readKey } from '@/lib/storage';
 
 describe('vault: createVault', () => {
@@ -66,5 +68,34 @@ describe('vault: openVault', () => {
     await expect(openVault('any password')).rejects.toBeInstanceOf(
       VaultLockedError,
     );
+  });
+});
+
+describe('vault: writeVaultData', () => {
+  beforeEach(async () => {
+    await clearAll();
+  });
+
+  it('updates vault data and roundtrips via openVault', async () => {
+    await createVault('my strong pw 123');
+    const first = await openVault('my strong pw 123');
+    expect(first.data).toEqual({});
+
+    const updated: VaultData = {
+      ...first,
+      data: { foo: 'bar', n: 42 },
+    };
+    await writeVaultData(updated, 'my strong pw 123');
+
+    const reopened = await openVault('my strong pw 123');
+    expect(reopened.data).toEqual({ foo: 'bar', n: 42 });
+  });
+
+  it('writeVaultData with wrong password throws', async () => {
+    await createVault('my strong pw 123');
+    const d = await openVault('my strong pw 123');
+    await expect(
+      writeVaultData(d, 'different password!'),
+    ).rejects.toBeInstanceOf(WrongPasswordError);
   });
 });

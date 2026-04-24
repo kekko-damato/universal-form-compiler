@@ -113,3 +113,34 @@ export async function openVault(masterPassword: string): Promise<VaultData> {
   const json = new TextDecoder().decode(plaintext);
   return JSON.parse(json) as VaultData;
 }
+
+/**
+ * Re-encrypts the vault with fresh IV using the given master password.
+ * Verifies the password by attempting decryption first.
+ */
+export async function writeVaultData(
+  data: VaultData,
+  masterPassword: string,
+): Promise<void> {
+  // Verify password by re-reading existing blob
+  await openVault(masterPassword); // throws if wrong
+
+  const blob = await readVaultBlob();
+  if (!blob) throw new VaultLockedError();
+
+  const salt = fromBase64(blob.salt);
+  const key = await deriveKey(masterPassword, salt, {
+    iterations: blob.kdfParams.iterations,
+    hash: blob.kdfParams.hash,
+  });
+
+  const plaintext = new TextEncoder().encode(JSON.stringify(data));
+  const encrypted = await encrypt(key, plaintext);
+
+  const updated: VaultBlob = {
+    ...blob,
+    iv: toBase64(encrypted.iv),
+    ciphertext: toBase64(encrypted.ciphertext),
+  };
+  await writeKey(VAULT_STORAGE_KEY, updated);
+}
