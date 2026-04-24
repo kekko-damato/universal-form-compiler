@@ -91,6 +91,23 @@ describe('computeProposal', () => {
     expect(result.proposal[0]!.canonicalKey).toBeNull();
   });
 
+  it('handles AI response with note: null without crashing', async () => {
+    const ai = makeAI({
+      mappings: [
+        { fieldId: 'ufc-1', canonicalKey: 'person.first_name', confidence: 0.95, note: null },
+        { fieldId: 'ufc-2', canonicalKey: null, confidence: 0.2, note: null },
+      ],
+    });
+    const fields = sampleFields().slice(0, 2);
+    const result = await computeProposal(fields, sampleData(), { ai });
+    const fn = result.proposal.find((m) => m.fieldId === 'ufc-1')!;
+    expect(fn.canonicalKey).toBe('person.first_name');
+    expect(fn.note).toBeUndefined();
+    const em = result.proposal.find((m) => m.fieldId === 'ufc-2')!;
+    expect(em.status).toBe('unmapped');
+    expect(em.note).toBeUndefined();
+  });
+
   it('masks sensitive values in preview even when mapped', async () => {
     const ai = makeAI({ mappings: [] });
     const data: CanonicalData = {

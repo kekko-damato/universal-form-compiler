@@ -11,14 +11,19 @@ describe('mapping prompt', () => {
     expect(MAPPING_SYSTEM_PROMPT.length).toBeGreaterThan(100);
   });
 
-  it('schema declares mappings array of {fieldId, canonicalKey, confidence}', () => {
+  it('schema declares mappings array of {fieldId, canonicalKey, confidence, note}', () => {
     expect(MAPPING_RESPONSE_SCHEMA).toMatchObject({
       type: 'object',
       properties: {
         mappings: {
           type: 'array',
           items: expect.objectContaining({
-            required: expect.arrayContaining(['fieldId', 'canonicalKey', 'confidence']),
+            required: expect.arrayContaining([
+              'fieldId',
+              'canonicalKey',
+              'confidence',
+              'note',
+            ]),
           }),
         },
       },

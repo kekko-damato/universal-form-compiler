@@ -61,7 +61,7 @@ export async function computeProposal(
         fieldId: string;
         canonicalKey: string | null;
         confidence: number;
-        note?: string;
+        note?: string | null;
       }[];
     }>({
       system: MAPPING_SYSTEM_PROMPT,
@@ -90,14 +90,18 @@ export async function computeProposal(
         status !== 'unmapped' && found.canonicalKey
           ? resolveValue(data, found.canonicalKey)
           : '';
-      aiMappings.push({
+      const mapping: Mapping = {
         fieldId: f.id,
         canonicalKey: found.canonicalKey,
         displayValuePreview: value,
         status,
         confidence: found.confidence,
-        note: found.note,
-      });
+      };
+      // Treat null note as "no note" — omit the field instead of carrying null.
+      if (found.note != null && found.note !== '') {
+        mapping.note = found.note;
+      }
+      aiMappings.push(mapping);
     }
   } else {
     for (const f of remaining) {
