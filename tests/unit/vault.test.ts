@@ -3,6 +3,7 @@ import type { VaultData } from '@/lib/vault';
 import { createVault, hasVault, readVaultBlob, VAULT_STORAGE_KEY } from '@/lib/vault';
 import { openVault, VaultLockedError, WrongPasswordError } from '@/lib/vault';
 import { writeVaultData } from '@/lib/vault';
+import { deleteVault } from '@/lib/vault';
 import { clearAll, readKey } from '@/lib/storage';
 
 describe('vault: createVault', () => {
@@ -97,5 +98,27 @@ describe('vault: writeVaultData', () => {
     await expect(
       writeVaultData(d, 'different password!'),
     ).rejects.toBeInstanceOf(WrongPasswordError);
+  });
+});
+
+describe('vault: deleteVault', () => {
+  beforeEach(async () => {
+    await clearAll();
+  });
+
+  it('requires correct password and removes storage key', async () => {
+    await createVault('pw very long here');
+    expect(await hasVault()).toBe(true);
+
+    await deleteVault('pw very long here');
+    expect(await hasVault()).toBe(false);
+  });
+
+  it('wrong password throws and does not delete', async () => {
+    await createVault('pw very long here');
+    await expect(deleteVault('wrong pw is wrong')).rejects.toBeInstanceOf(
+      WrongPasswordError,
+    );
+    expect(await hasVault()).toBe(true);
   });
 });

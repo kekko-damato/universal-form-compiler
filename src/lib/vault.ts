@@ -7,7 +7,7 @@ import {
   fromBase64,
   type EncryptedBlob,
 } from './crypto';
-import { readKey, writeKey } from './storage';
+import { readKey, writeKey, removeKey } from './storage';
 
 export const VAULT_STORAGE_KEY = 'ufc_vault_v1';
 export const MIN_MASTER_PASSWORD_LENGTH = 12;
@@ -143,4 +143,9 @@ export async function writeVaultData(
     ciphertext: toBase64(encrypted.ciphertext),
   };
   await writeKey(VAULT_STORAGE_KEY, updated);
+}
+
+export async function deleteVault(masterPassword: string): Promise<void> {
+  await openVault(masterPassword); // verifies password; throws otherwise
+  await removeKey(VAULT_STORAGE_KEY);
 }
