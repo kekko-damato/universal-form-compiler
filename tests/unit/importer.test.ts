@@ -110,4 +110,57 @@ describe('importRawData', () => {
     );
     expect(result.ok).toBe(true);
   });
+
+  it('hoists nested "custom" keys from sub-objects to root before validation', async () => {
+    const deps = makeDeps({
+      data: {
+        version: 1,
+        person: {
+          first_name: 'Antonio',
+          last_name: 'Rossi',
+          custom: { nickname: 'Anto', favourite_color: 'blue' },
+        } as never,
+        contact: {
+          email: 'a@b.co',
+          custom: { messenger: 'signal' },
+        } as never,
+      },
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    });
+
+    const result = await importRawData({ format: 'text', text: 'x' }, deps);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.person.first_name).toBe('Antonio');
+      expect((result.data.person as Record<string, unknown>).custom).toBeUndefined();
+      expect((result.data.contact as Record<string, unknown>).custom).toBeUndefined();
+      expect(result.data.custom).toEqual({
+        person_nickname: 'Anto',
+        person_favourite_color: 'blue',
+        contact_messenger: 'signal',
+      });
+    }
+  });
+
+  it('strips unknown sub-object keys (namespacing into custom)', async () => {
+    const deps = makeDeps({
+      data: {
+        version: 1,
+        person: {
+          first_name: 'A',
+          last_name: 'B',
+          weight_kg: 70,
+        } as never,
+        contact: { email: 'a@b.co' },
+      },
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    });
+
+    const result = await importRawData({ format: 'text', text: 'x' }, deps);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect((result.data.person as Record<string, unknown>).weight_kg).toBeUndefined();
+      expect(result.data.custom?.person_weight_kg).toBe(70);
+    }
+  });
 });
