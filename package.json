@@ -1,7 +1,7 @@
 {
   "name": "universal-form-compiler",
   "version": "0.1.0",
-  "description": "Chrome extension that auto-fills any web form from an encrypted JSON vault using OpenAI",
+  "description": "Chrome extension that auto-fills any web form from your personal data using OpenAI — multi-document, light/dark theme, anti-hallucination guards.",
   "private": true,
   "type": "module",
   "scripts": {

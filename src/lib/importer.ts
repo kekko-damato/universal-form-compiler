@@ -6,6 +6,7 @@ import {
 import { parseCsvToText } from './csv-parse';
 import { parseYamlToText } from './yaml-parse';
 import { extractDocxText } from './docx-text';
+import { looksLikeExampleEmail } from './value-guards';
 import type {
   AIClient,
   StructuredCompletionResult,
@@ -41,18 +42,27 @@ export function detectFormat(filename: string): ImportFormat {
 
 const SYSTEM_PROMPT = `You normalize free-form personal and company data from a user-supplied document into a strict canonical JSON schema.
 
+ABSOLUTE ANTI-FABRICATION RULE — read this twice:
+You are a TRANSCRIBER, not an INFERENCER. Every value you output must be present (verbatim or with a trivial format change) in the source document. You are FORBIDDEN from:
+  - Inventing emails, phones, addresses, dates, names, IDs, codes, or anything not literally written in the document.
+  - Generating plausible placeholders like "example@example.com", "John Doe", "+39 333 1234567", "1990-01-01".
+  - Inferring values from context (e.g. don't guess a person's gender from their name; don't guess a province from a city; don't guess a fiscal code from birth data).
+  - Translating, expanding abbreviations, or otherwise enriching data not stated.
+If a field is not present in the document, OMIT it. An incomplete profile is the correct output. Output { "version": 1, "person": {...} } with NOTHING ELSE if that's all the document contains.
+
 CRITICAL STRUCTURAL RULES:
 - The "custom" object exists ONLY at the root level. NEVER add a "custom" key inside "person", "contact", "company", "banking", "addresses", "documents", or any other nested object.
 - Each nested object (person, contact, company, etc.) accepts ONLY the keys listed in the schema. Do not invent keys.
 - If a piece of data does not fit any known key, put it at root level: { "custom": { "your_key": "value" } }.
 - Always emit "version": 1 at the root.
 
-CONTENT RULES:
+CONTENT RULES (apply ONLY when the value is in the document):
 - Italian fiscal terms: "Partita IVA" -> company.vat_number; "Codice Fiscale" of a person -> person.tax_code; of a company -> company.tax_code; "PEC" -> contact.pec.
-- Dates MUST be ISO YYYY-MM-DD. Italian "GG/MM/AAAA" must be converted (e.g. "05/03/1990" -> "1990-03-05").
-- Emails and URLs must be valid.
-- If a value is ambiguous, skip it - never guess password, IBAN, credit card, or other sensitive data.
-- Do not fabricate missing data. If first_name/last_name/email are not present in the document, omit them.
+- Dates MUST be ISO YYYY-MM-DD. Italian "GG/MM/AAAA" must be converted (e.g. "05/03/1990" -> "1990-03-05"). This is a format change, not a fabrication.
+- Emails and URLs must be syntactically valid. If the document has an invalid email, omit it rather than "fix" it.
+- The "contact" object is OPTIONAL — if the document has no email/phone/etc., omit "contact" entirely. Never invent a placeholder email.
+- Italian double given names ("Maria Cristina", "Raffaele Francesco", "Anna Maria", "Vincenzo Antonio", etc.) are a SINGLE given name in Italian usage. Put the ENTIRE multi-word given name in person.first_name. Do NOT split them into first_name + middle_name. Use middle_name ONLY for explicit middle initials or non-Italian middle names that are clearly distinct from the first name (e.g., "John F. Kennedy" -> first_name: "John", middle_name: "F.").
+- Sensitive values (password, IBAN, credit card numbers, SSN): if explicitly present in the document, include them. Never guess. If absent, omit.
 
 EXAMPLE of correct output:
 {
@@ -130,6 +140,21 @@ function sanitizeAIOutput(raw: unknown): unknown {
   if (Object.keys(rootCustom).length > 0) {
     root.custom = rootCustom;
   }
+
+  // Strip any email that looks like a placeholder / RFC-reserved example
+  // (e.g. "mario.rossi@example.com"). The model sometimes echoes example
+  // boilerplate from forms/documents — never let those reach the vault.
+  const contact = root.contact as Record<string, unknown> | undefined;
+  if (contact && typeof contact.email === 'string' && looksLikeExampleEmail(contact.email)) {
+    delete contact.email;
+  }
+  if (contact && typeof contact.email_secondary === 'string' && looksLikeExampleEmail(contact.email_secondary)) {
+    delete contact.email_secondary;
+  }
+  if (contact && typeof contact.pec === 'string' && looksLikeExampleEmail(contact.pec)) {
+    delete contact.pec;
+  }
+
   return root;
 }
 
@@ -182,7 +207,7 @@ function toOpenAIJsonSchema(): Record<string, unknown> {
   return {
     type: 'object',
     additionalProperties: false,
-    required: ['version', 'person', 'contact'],
+    required: ['version', 'person'],
     properties: {
       version: { type: 'integer', enum: [1] },
       person: {
@@ -206,7 +231,6 @@ function toOpenAIJsonSchema(): Record<string, unknown> {
       contact: {
         type: 'object',
         additionalProperties: false,
-        required: ['email'],
         properties: {
           email: { type: 'string', format: 'email' },
           email_secondary: { type: 'string', format: 'email' },

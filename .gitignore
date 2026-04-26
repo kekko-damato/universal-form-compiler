@@ -7,3 +7,6 @@ dist/
 coverage/
 .vite/
 _legacy/
+# Internal planning docs — not part of the published project
+docs/
+.claude/

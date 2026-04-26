@@ -1,11 +1,15 @@
 import type { ViewRenderer } from './router';
 import { createWizardImportStep } from './wizard-step-import';
 import { createWizardReviewStep } from './wizard-step-review';
+import type {
+  SaveCanonicalDataRequest,
+  SaveCanonicalDataResponse,
+} from '@/types/messages';
 
 type WizardStep = 'import' | 'review' | 'done';
 
-// Passwordless wizard: just import → review → done. The old password step
-// was dropped when the master-password flow was removed.
+// First-time setup: import → review → done. Saves via canonical/save which
+// auto-creates the first document profile in the vault.
 export function createSetupWizard(
   onFinished: () => Promise<void>,
 ): ViewRenderer {
@@ -30,11 +34,26 @@ export function createSetupWizard(
               await advance('review');
             });
           case 'review':
-            return createWizardReviewStep(importedData, async () => {
-              await advance('done');
+            return createWizardReviewStep({
+              data: importedData,
+              onSave: async (parsed) => {
+                const res = (await chrome.runtime.sendMessage({
+                  type: 'canonical/save',
+                  data: parsed,
+                } as SaveCanonicalDataRequest)) as SaveCanonicalDataResponse;
+                return res;
+              },
+              onDone: async () => {
+                await advance('done');
+              },
             });
           case 'done':
-            container.innerHTML = '<p class="muted">Fatto, sto caricando…</p>';
+            container.innerHTML = `
+              <div class="loading-block">
+                <span class="spinner"></span>
+                <span>Fatto, sto caricando…</span>
+              </div>
+            `;
             await onFinished();
             return null;
         }

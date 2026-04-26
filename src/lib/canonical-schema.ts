@@ -36,7 +36,7 @@ const PersonSchema = z
 
 const ContactSchema = z
   .object({
-    email: z.string().email(),
+    email: z.string().email().optional(),
     email_secondary: z.string().email().optional(),
     phone: z.string().optional(),
     phone_mobile: z.string().optional(),
@@ -107,7 +107,10 @@ export const CanonicalDataSchema = z
   .object({
     version: z.literal(1),
     person: PersonSchema,
-    contact: ContactSchema,
+    // Default to {} so downstream code can safely read contact.* without
+    // null-checks; we still want callers to read with optional chaining
+    // because individual contact fields are themselves optional.
+    contact: ContactSchema.default({}),
     addresses: AddressesSchema.optional(),
     company: CompanySchema.optional(),
     banking: BankingSchema.optional(),
@@ -192,4 +195,30 @@ export function listAvailableKeys(
   walk(data, '');
   // Remove the version key
   return keys.filter((k) => k !== 'version');
+}
+
+// Returns a deep copy of `data` with every sensitive leaf removed (replaced
+// by undefined / dropped). Used before sending the canonical JSON to the AI
+// for Pass 2 (AI-fill).
+export function scrubSensitive(data: CanonicalData): unknown {
+  const walk = (obj: unknown, prefix: string): unknown => {
+    if (obj === null || obj === undefined) return obj;
+    if (typeof obj !== 'object') {
+      if (isSensitivePath(prefix)) return undefined;
+      return obj;
+    }
+    if (Array.isArray(obj)) {
+      return obj
+        .map((item, idx) => walk(item, `${prefix}[${idx}]`))
+        .filter((v) => v !== undefined);
+    }
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      const next = prefix === '' ? k : `${prefix}.${k}`;
+      const scrubbed = walk(v, next);
+      if (scrubbed !== undefined) out[k] = scrubbed;
+    }
+    return out;
+  };
+  return walk(data, '');
 }

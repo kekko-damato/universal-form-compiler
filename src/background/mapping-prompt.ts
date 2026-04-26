@@ -39,19 +39,33 @@ export function buildMappingUserPrompt(
   fields: FieldDescriptor[],
   availableKeys: string[],
 ): string {
-  const fieldsJson = JSON.stringify(
-    fields.map((f) => ({
+  // Compact field representation: drop noise that does not help the model
+  // pick a canonical key (validation rules, redundant attributes, source
+  // tags inside labels). This trims prompt tokens significantly on large
+  // forms — the AI runs faster and costs less without losing signal.
+  const compactFields = fields.map((f) => {
+    const out: Record<string, unknown> = {
       id: f.id,
-      widget: f.widget,
-      labels: f.labels,
-      attributes: f.attributes,
-      options: f.options,
-      validation: f.validation,
-      context: f.context,
-    })),
-    null,
-    2,
-  );
-  const keysJson = JSON.stringify(availableKeys);
-  return `Available canonical keys:\n${keysJson}\n\nFields to map:\n${fieldsJson}`;
+      labels: f.labels.map((l) => l.text),
+    };
+    out.widget =
+      f.widget.kind === 'native-input'
+        ? f.widget.type
+        : f.widget.kind === 'native-select'
+          ? 'select'
+          : f.widget.kind === 'native-textarea'
+            ? 'textarea'
+            : 'unsupported';
+    const a: Record<string, string> = {};
+    if (f.attributes.name) a.name = f.attributes.name;
+    if (f.attributes.id) a.id = f.attributes.id;
+    if (f.attributes.autocomplete) a.autocomplete = f.attributes.autocomplete;
+    if (f.attributes.placeholder) a.placeholder = f.attributes.placeholder;
+    if (Object.keys(a).length > 0) out.attrs = a;
+    if (f.options && f.options.length > 0) out.options = f.options;
+    if (f.context.formTitle) out.formTitle = f.context.formTitle;
+    return out;
+  });
+  // Inline JSON (no pretty-print) → fewer tokens.
+  return `Available canonical keys:\n${JSON.stringify(availableKeys)}\n\nFields to map:\n${JSON.stringify(compactFields)}`;
 }

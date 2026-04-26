@@ -29,23 +29,46 @@ describe('importRawData', () => {
       data: {
         version: 1,
         person: { first_name: 'Antonio', last_name: 'Rossi' },
-        contact: { email: 'antonio@example.com' },
+        contact: { email: 'antonio.rossi@anthropic.com' },
       },
       usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
     });
 
     const result = await importRawData(
-      { format: 'text', text: 'nome: antonio\ncognome: rossi\nemail: antonio@example.com' },
+      { format: 'text', text: 'nome: antonio\ncognome: rossi\nemail: antonio.rossi@anthropic.com' },
       deps,
     );
 
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.person.first_name).toBe('Antonio');
-      expect(result.data.contact.email).toBe('antonio@example.com');
+      expect(result.data.contact.email).toBe('antonio.rossi@anthropic.com');
       expect(result.usage.total_tokens).toBe(30);
     }
     expect(deps.ai.jsonCompletion).toHaveBeenCalledTimes(1);
+  });
+
+  it('strips placeholder/example emails the AI may have echoed from the document', async () => {
+    const deps = makeDeps({
+      data: {
+        version: 1,
+        person: { first_name: 'Raffaele Francesco', last_name: "D'Amato" },
+        contact: { email: 'mario.rossi@example.com' },
+      },
+      usage: { prompt_tokens: 1, completion_tokens: 1, total_tokens: 2 },
+    });
+
+    const result = await importRawData(
+      { format: 'text', text: 'cognome: D\'Amato\nnome: Raffaele Francesco' },
+      deps,
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      // Bogus example email must be stripped — not stored in the vault.
+      expect(result.data.contact.email).toBeUndefined();
+      // The legitimate person fields survive.
+      expect(result.data.person.first_name).toBe('Raffaele Francesco');
+    }
   });
 
   it('returns validation errors if AI output fails Zod validation', async () => {

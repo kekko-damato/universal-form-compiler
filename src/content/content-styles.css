@@ -1,3 +1,8 @@
+/* =========================================================================
+   Field markers — outline + subtle shadow on the focused field, all behind
+   the page's own styles via !important so they survive site CSS.
+   ========================================================================= */
+
 .ufc-mark-certain,
 .ufc-mark-uncertain,
 .ufc-mark-unmapped,
@@ -5,27 +10,232 @@
 .ufc-mark-skipped {
   outline: 2px solid transparent !important;
   outline-offset: 2px !important;
-  transition: outline-color 120ms ease-in-out;
+  border-radius: 4px !important;
+  transition: outline-color 140ms ease, box-shadow 140ms ease !important;
 }
-.ufc-mark-certain { outline-color: #10b981 !important; }
-.ufc-mark-uncertain { outline-color: #f59e0b !important; }
-.ufc-mark-unmapped { outline-color: #ef4444 !important; }
-.ufc-mark-sensitive { outline-color: #8b5cf6 !important; }
-.ufc-mark-skipped { outline-color: #6b7280 !important; }
+
+.ufc-mark-certain {
+  outline-color: #10b981 !important;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.15) !important;
+}
+.ufc-mark-uncertain {
+  outline-color: #f59e0b !important;
+  box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.15) !important;
+}
+.ufc-mark-unmapped {
+  outline-color: #ef4444 !important;
+  box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.12) !important;
+}
+.ufc-mark-sensitive {
+  outline-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.18) !important;
+}
+.ufc-mark-skipped {
+  outline-color: #6b7280 !important;
+  box-shadow: 0 0 0 4px rgba(107, 114, 128, 0.12) !important;
+}
+
+/* =========================================================================
+   Toast
+   ========================================================================= */
 
 .ufc-toast {
   position: fixed !important;
-  bottom: 16px !important;
-  right: 16px !important;
-  padding: 10px 14px !important;
-  border-radius: 8px !important;
+  bottom: 20px !important;
+  right: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 12px 14px !important;
+  border-radius: 10px !important;
   background: #0f172a !important;
   color: #f1f5f9 !important;
-  font: 500 13px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif !important;
+  font: 500 13px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica,
+    Arial, sans-serif !important;
   z-index: 2147483647 !important;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35) !important;
-  max-width: 360px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35),
+    0 2px 6px rgba(0, 0, 0, 0.25) !important;
+  max-width: 380px !important;
+  border: 1px solid rgba(148, 163, 184, 0.15) !important;
+  transform: translateY(20px) !important;
+  opacity: 0 !important;
+  transition: transform 200ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 200ms ease !important;
+}
+
+.ufc-toast.ufc-toast-show {
+  transform: translateY(0) !important;
+  opacity: 1 !important;
+}
+
+.ufc-toast-icon {
+  width: 28px !important;
+  height: 28px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+.ufc-toast-msg {
+  flex: 1 !important;
+  white-space: pre-wrap !important;
+  line-height: 1.4 !important;
+}
+
+.ufc-toast-close {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  margin-left: 4px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  transition: background 120ms ease, color 120ms ease !important;
+}
+.ufc-toast-close:hover {
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #f1f5f9 !important;
+}
+
+.ufc-toast-success .ufc-toast-icon {
+  background: rgba(16, 185, 129, 0.18) !important;
+  color: #10b981 !important;
+}
+.ufc-toast-warning .ufc-toast-icon {
+  background: rgba(245, 158, 11, 0.18) !important;
+  color: #f59e0b !important;
 }
 .ufc-toast-error {
-  background: #7f1d1d !important;
+  background: #1c0f12 !important;
+  border-color: rgba(239, 68, 68, 0.4) !important;
+}
+.ufc-toast-error .ufc-toast-icon {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+}
+.ufc-toast-info .ufc-toast-icon {
+  background: rgba(56, 189, 248, 0.18) !important;
+  color: #38bdf8 !important;
+}
+
+/* =========================================================================
+   Floating status widget — bottom-right pill that mirrors the popup state
+   while the user is on the page.
+   ========================================================================= */
+
+.ufc-widget {
+  position: fixed !important;
+  bottom: 80px !important;
+  right: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
+  background: linear-gradient(180deg, #131c30 0%, #0f172a 100%) !important;
+  color: #f1f5f9 !important;
+  border-radius: 12px !important;
+  font: 500 13px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica,
+    Arial, sans-serif !important;
+  z-index: 2147483646 !important;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.25) !important;
+  border: 1px solid rgba(148, 163, 184, 0.18) !important;
+  min-width: 230px !important;
+  max-width: 320px !important;
+  transform: translateY(20px) scale(0.96) !important;
+  opacity: 0 !important;
+  transition: transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 220ms ease !important;
+}
+
+.ufc-widget.ufc-widget-show {
+  transform: translateY(0) scale(1) !important;
+  opacity: 1 !important;
+}
+
+.ufc-widget-icon {
+  width: 32px !important;
+  height: 32px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 8px !important;
+  flex-shrink: 0 !important;
+  background: linear-gradient(135deg, #38bdf8, #8b5cf6) !important;
+  color: #0f172a !important;
+}
+
+.ufc-widget-body {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.ufc-widget-title {
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  letter-spacing: 0.1px !important;
+}
+
+.ufc-widget-detail {
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  margin-top: 1px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.ufc-widget-close {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 22px !important;
+  height: 22px !important;
+  border: none !important;
+  background: transparent !important;
+  color: #94a3b8 !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+  flex-shrink: 0 !important;
+  transition: background 120ms ease, color 120ms ease !important;
+}
+.ufc-widget-close:hover {
+  background: rgba(148, 163, 184, 0.15) !important;
+  color: #f1f5f9 !important;
+}
+
+.ufc-widget-analyzing .ufc-widget-icon,
+.ufc-widget-filling .ufc-widget-icon {
+  background: linear-gradient(135deg, #38bdf8, #8b5cf6) !important;
+}
+.ufc-widget-ready .ufc-widget-icon {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: #38bdf8 !important;
+}
+.ufc-widget-done .ufc-widget-icon {
+  background: rgba(16, 185, 129, 0.2) !important;
+  color: #10b981 !important;
+}
+.ufc-widget-error .ufc-widget-icon {
+  background: rgba(239, 68, 68, 0.2) !important;
+  color: #f87171 !important;
+}
+
+/* Spinner animation used inside the widget icon during analyzing/filling. */
+.ufc-spin {
+  animation: ufc-spin 0.9s linear infinite !important;
+}
+
+@keyframes ufc-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

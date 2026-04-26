@@ -43,22 +43,23 @@ describe('vault (passwordless)', () => {
 
   describe('secretConfig roundtrip', () => {
     it('stores and reads apiKey + model', async () => {
-      const cfg: SecretConfig = { apiKey: 'sk-test-abc', model: 'gpt-4o-mini' };
+      const cfg: SecretConfig = { apiKey: 'sk-test-abc', model: 'gpt-4o-mini', theme: 'system' };
       await writeSecretConfig(cfg);
       expect(await readSecretConfig()).toEqual(cfg);
     });
 
     it('overwrites previous secret config', async () => {
-      await writeSecretConfig({ apiKey: 'sk-1', model: 'gpt-4o-mini' });
-      await writeSecretConfig({ apiKey: 'sk-2', model: 'gpt-4o' });
+      await writeSecretConfig({ apiKey: 'sk-1', model: 'gpt-4o-mini', theme: 'system' });
+      await writeSecretConfig({ apiKey: 'sk-2', model: 'gpt-4o', theme: 'dark' });
       expect(await readSecretConfig()).toEqual({
         apiKey: 'sk-2',
         model: 'gpt-4o',
+        theme: 'dark',
       });
     });
 
     it('setting a secret config alone does NOT flip hasVaultData to true', async () => {
-      await writeSecretConfig({ apiKey: 'sk-1', model: 'gpt-4o-mini' });
+      await writeSecretConfig({ apiKey: 'sk-1', model: 'gpt-4o-mini', theme: 'system' });
       expect(await hasVaultData()).toBe(false);
     });
   });
@@ -82,11 +83,12 @@ describe('vault (passwordless)', () => {
     });
 
     it('does not clobber a previously-stored secretConfig', async () => {
-      await writeSecretConfig({ apiKey: 'sk-keep', model: 'gpt-4o-mini' });
+      await writeSecretConfig({ apiKey: 'sk-keep', model: 'gpt-4o-mini', theme: 'system' });
       await writeCanonicalData(sample);
       expect(await readSecretConfig()).toEqual({
         apiKey: 'sk-keep',
         model: 'gpt-4o-mini',
+        theme: 'system',
       });
     });
   });
@@ -97,7 +99,7 @@ describe('vault (passwordless)', () => {
         version: 1,
         createdAt: '2026-04-24T00:00:00.000Z',
         data: {
-          secretConfig: { apiKey: 'sk-x', model: 'gpt-4o-mini' },
+          secretConfig: { apiKey: 'sk-x', model: 'gpt-4o-mini', theme: 'system' },
         },
       };
       await writeAll(v);
@@ -105,7 +107,7 @@ describe('vault (passwordless)', () => {
     });
 
     it('stores data as plain JSON in chrome.storage.local (no encryption)', async () => {
-      const cfg: SecretConfig = { apiKey: 'sk-plain', model: 'gpt-4o-mini' };
+      const cfg: SecretConfig = { apiKey: 'sk-plain', model: 'gpt-4o-mini', theme: 'system' };
       await writeSecretConfig(cfg);
       const raw = await readKey<VaultData>(VAULT_STORAGE_KEY);
       // Direct readable access — no ciphertext field, etc.

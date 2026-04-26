@@ -221,10 +221,20 @@ function cssEscape(s: string): string {
 
 function isHidden(el: HTMLElement): boolean {
   if (el instanceof HTMLInputElement && el.type === 'hidden') return true;
-  const style = el.ownerDocument?.defaultView?.getComputedStyle(el);
-  if (style && (style.display === 'none' || style.visibility === 'hidden')) return true;
-  // Also treat `hidden` attribute
-  if (el.hasAttribute('hidden')) return true;
+  const win = el.ownerDocument?.defaultView;
+  // Walk up to <html>: a parent with display:none / visibility:hidden /
+  // hidden attribute hides every descendant. CSS does NOT inherit `display`
+  // so a per-element getComputedStyle check would miss this very common
+  // case (e.g. fields inside a collapsed accordion).
+  let cur: HTMLElement | null = el;
+  while (cur) {
+    if (cur.hasAttribute('hidden')) return true;
+    if (win) {
+      const style = win.getComputedStyle(cur);
+      if (style.display === 'none' || style.visibility === 'hidden') return true;
+    }
+    cur = cur.parentElement;
+  }
   return false;
 }
 
