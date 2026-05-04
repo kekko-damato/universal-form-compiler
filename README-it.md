@@ -1,6 +1,6 @@
 # Compilatore (Universale)
 
-> 🇬🇧 [English version available](README.en.md)
+> 🇬🇧 [English version available](README.md)
 
 Estensione Chrome (Manifest V3) che compila automaticamente i form di **qualsiasi sito web** usando l'AI di OpenAI a partire dai documenti che carichi (PDF, DOCX). Pensata per ridurre il tempo di compilazione di moduli ripetitivi mantenendo l'utente sempre in controllo: nessun invio automatico, conferma esplicita prima di ogni azione.
 
