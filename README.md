@@ -1,6 +1,6 @@
 # Compiler (Universal)
 
-> 🇮🇹 [Versione italiana disponibile](README.md)
+> 🇮🇹 [Versione italiana disponibile](README-it.md)
 
 A Chrome extension (Manifest V3) that automatically fills web forms on **any website** using OpenAI, based on documents you upload (PDF, DOCX). Designed to cut down repetitive form-filling time while keeping the user always in control: no automatic submissions, explicit confirmation before every action.
 
