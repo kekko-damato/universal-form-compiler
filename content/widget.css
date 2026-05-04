@@ -1,0 +1,12 @@
+/* Wrapper iniettato fuori dal Shadow DOM - solo posizionamento root.
+ * IMPORTANTE: top/left/right NON hanno !important per permettere al drag JS
+ * di sovrascriverli. Solo position/z-index/width/pointer-events sono protetti. */
+#invitalia-ai-compiler-root {
+  all: initial;
+  position: fixed !important;
+  z-index: 2147483647 !important; /* max int 32 - sopra a tutto */
+  width: 320px !important;
+  pointer-events: auto !important;
+  top: 80px;
+  right: 24px;
+}

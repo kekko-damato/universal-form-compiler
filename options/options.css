@@ -1,0 +1,108 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 14px;
+  line-height: 1.5;
+}
+main {
+  max-width: 720px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #003a8c, #0050b3);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 20px;
+  box-shadow: 0 6px 16px rgba(0,80,179,0.3);
+}
+h1 {
+  font-size: 22px;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+.subtitle {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+.card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.card h2 {
+  margin: 0 0 6px;
+  font-size: 15px;
+  letter-spacing: -0.1px;
+}
+.muted { color: #6b7280; font-size: 13px; margin: 0 0 14px; }
+.muted.small { font-size: 12px; }
+.row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+input[type="text"], input[type="password"], select {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+}
+input:focus, select:focus { outline: none; border-color: #0050b3; box-shadow: 0 0 0 3px rgba(0,80,179,0.15); }
+button {
+  cursor: pointer;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  border: 0;
+  transition: all 0.15s;
+}
+.btn-primary { background: #0050b3; color: #fff; }
+.btn-primary:hover { background: #003a8c; }
+.btn-secondary { background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; }
+.btn-secondary:hover { background: #e2e8f0; }
+.status {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  display: none;
+}
+.status.ok { display: block; background: #dcfce7; color: #166534; }
+.status.err { display: block; background: #fee2e2; color: #991b1b; }
+.status.info { display: block; background: #dbeafe; color: #1e40af; }
+.card.info { background: #fafafa; }
+.card ol { margin: 8px 0 4px; padding-left: 22px; }
+.card ol li { margin-bottom: 4px; }
+code { background: #e5e7eb; padding: 1px 6px; border-radius: 4px; font-size: 12px; }
+footer {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+  margin-top: 24px;
+  padding-bottom: 24px;
+}

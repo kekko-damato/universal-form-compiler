@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <title>Invitalia AI Compiler — Impostazioni</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <div class="logo">AI</div>
+      <div>
+        <h1>Invitalia AI Compiler</h1>
+        <p class="subtitle">Impostazioni</p>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>OpenAI API Key</h2>
+      <p class="muted">La tua chiave API personale. Viene salvata localmente nel browser (chrome.storage.sync) e usata solo per chiamare api.openai.com.</p>
+      <div class="row">
+        <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off" />
+        <button class="btn-secondary" id="toggleVisibility" title="Mostra/nascondi">&#128065;</button>
+      </div>
+      <div class="row">
+        <button class="btn-primary" id="saveKey">Salva</button>
+        <button class="btn-secondary" id="testKey">Test connessione</button>
+      </div>
+      <div id="status" class="status"></div>
+    </section>
+
+    <section class="card">
+      <h2>Modello AI predefinito</h2>
+      <p class="muted">Puoi cambiarlo anche al volo dal widget sulla pagina del bando.</p>
+      <select id="model">
+        <option value="gpt-4o">GPT-4o (consigliato)</option>
+        <option value="gpt-4o-mini">GPT-4o mini (economico)</option>
+        <option value="gpt-4-turbo">GPT-4 Turbo</option>
+        <option value="gpt-4.1">GPT-4.1</option>
+        <option value="gpt-4.1-mini">GPT-4.1 mini</option>
+        <option value="o1-mini">o1-mini (ragionamento)</option>
+      </select>
+    </section>
+
+    <section class="card info">
+      <h2>Come funziona</h2>
+      <ol>
+        <li>Apri una pagina di un bando su <code>*.invitalia.it</code> e fai login normalmente.</li>
+        <li>Si apre automaticamente un widget in alto a destra (puoi spostarlo).</li>
+        <li>Carica i documenti aziendali (PDF, DOCX) da cui estrarre i dati.</li>
+        <li>Premi <b>Compila</b>: l'AI legge i documenti e popola i campi del form.</li>
+        <li>Premi <b>Pulisci</b> per svuotare e riabilitare i campi.</li>
+      </ol>
+      <p class="muted small">L'estensione non clicca mai bottoni "Invia"/"Submit" — controlla sempre i dati prima di inoltrare la domanda.</p>
+    </section>
+
+    <footer>
+      <span>v1.0.0 &middot; RDD Italia</span>
+    </footer>
+  </main>
+
+  <script src="options.js"></script>
+</body>
+</html>

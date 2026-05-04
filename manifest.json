@@ -1,43 +1,50 @@
 {
   "manifest_version": 3,
-  "name": "Universal Form Compiler",
-  "version": "0.1.0",
-  "description": "Auto-fill any web form from an encrypted JSON vault using OpenAI.",
-  "author": {
-    "email": "raffaelefrancesco.damato@gmail.com"
-  },
-  "icons": {
-    "16": "src/assets/icon16.png",
-    "48": "src/assets/icon48.png",
-    "128": "src/assets/icon128.png"
-  },
-  "action": {
-    "default_popup": "src/popup/index.html",
-    "default_title": "Universal Form Compiler"
-  },
-  "background": {
-    "service_worker": "src/background/service-worker.ts",
-    "type": "module"
-  },
+  "name": "Compilatore (Universale)",
+  "version": "3.4.0",
+  "description": "Compilatore AI universale: compila form HTML / Angular Material su qualsiasi sito web usando OpenAI e documenti caricati. Si attiva on-demand cliccando l'icona dell'estensione (no auto-inject).",
+  "author": "Compilatore",
+
   "permissions": [
     "storage",
     "activeTab",
     "scripting"
   ],
+
+  "minimum_chrome_version": "111",
+
   "host_permissions": [
-    "https://api.openai.com/*",
-    "<all_urls>"
+    "https://*/*",
+    "http://*/*"
   ],
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["src/content/content-entry.ts"],
-      "css": ["src/content/content-styles.css"],
-      "run_at": "document_idle",
-      "all_frames": false
+
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+
+  "action": {
+    "default_title": "Compilatore (Universale) — clicca per attivare sulla pagina",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
     }
-  ],
-  "content_security_policy": {
-    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self'"
-  }
+  },
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "lib/pdf.worker.min.js",
+        "icons/*"
+      ],
+      "matches": ["<all_urls>"]
+    }
+  ]
 }
